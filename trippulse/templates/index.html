@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TripPulse Concierge</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .chat-box { height: 400px; overflow-y: auto; background: white; border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 8px; }
+        .trip-summary { white-space: pre-wrap; background: #e9ecef; padding: 20px; border-radius: 8px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .agent-msg { color: #0d6efd; font-weight: bold; }
+        .user-msg { color: #198754; font-weight: bold; }
+        .system-msg { color: #dc3545; font-weight: bold; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <header class="pb-3 mb-4 border-bottom">
+            <span class="fs-4">🚀 TripPulse Multi-Agent Concierge</span>
+        </header>
+
+        <div class="row g-5">
+            <!-- Planning Form -->
+            <div class="col-md-5">
+                <h3>Plan a New Trip</h3>
+                <form id="planForm" class="p-4 border rounded bg-white">
+                    <div class="mb-3">
+                        <label class="form-label">Destination</label>
+                        <input type="text" id="dest" class="form-control" placeholder="e.g. Tokyo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Total Budget ($)</label>
+                        <input type="number" id="budget" class="form-control" value="2000" required>
+                    </div>
+                    <div class="row">
+                        <div class="col mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" id="start" class="form-control" value="2026-09-10" required>
+                        </div>
+                        <div class="col mb-3">
+                            <label class="form-label">End Date</label>
+                            <input type="date" id="end" class="form-control" value="2026-09-13" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Generate Itinerary</button>
+                </form>
+
+                <hr class="my-4">
+
+                <h3>Disruption Simulation</h3>
+                <div class="p-4 border rounded bg-white">
+                    <p class="text-muted small">Trigger the re-planning pipeline manually:</p>
+                    <button class="btn btn-outline-warning mb-2 w-100" onclick="simulateDisruption('flight_delay')">Simulate Flight Delay</button>
+                    <button class="btn btn-outline-info w-100" onclick="simulateDisruption('weather_rain')">Simulate Bad Weather</button>
+                </div>
+            </div>
+
+            <!-- Dashboard & Chat -->
+            <div class="col-md-7">
+                <div id="dashboard" style="display:none;">
+                    <h3>Trip Dashboard</h3>
+                    <div id="summary" class="trip-summary mb-4"></div>
+
+                    <h3>Chat with Concierge</h3>
+                    <div id="chatBox" class="chat-box"></div>
+                    <div class="input-group mb-3">
+                        <input type="text" id="chatInput" class="form-control" placeholder="Ask about weather, flights, or budget...">
+                        <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+                    </div>
+                </div>
+                <div id="loading" class="text-center mt-5" style="display:none;">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2">Orchestrating agents and querying data providers...</p>
+                </div>
+                <div id="welcome" class="text-center mt-5">
+                    <p class="text-muted">Enter trip details on the left to start the multi-agent discovery process.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTripId = null;
+
+        document.getElementById('planForm').onsubmit = async (e) => {
+            e.preventDefault();
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('welcome').style.display = 'none';
+
+            const payload = {
+                destination: document.getElementById('dest').value,
+                total_budget: parseFloat(document.getElementById('budget').value),
+                start_date: document.getElementById('start').value,
+                end_date: document.getElementById('end').value,
+                interests: ["culture", "food", "sightseeing"],
+                travel_style: "balanced",
+                max_flight_price: 800.0
+            };
+
+            const res = await fetch('/api/plan', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            currentTripId = data.trip_id;
+            updateUI(data);
+        };
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value;
+            if (!msg || !currentTripId) return;
+
+            appendChat('You', msg, 'user-msg');
+            input.value = '';
+
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({trip_id: currentTripId, message: msg})
+            });
+            const data = await res.json();
+            appendChat('Concierge', data.reply, 'agent-msg');
+        }
+
+        async function simulateDisruption(type) {
+            if (!currentTripId) return alert('Please plan a trip first!');
+            
+            const res = await fetch('/api/replan', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({trip_id: currentTripId, disruption_type: type, details: "Manual simulation trigger"})
+            });
+            const data = await res.json();
+            updateUI(data);
+            appendChat('System', `Disruption event handled: ${type}. Itinerary adjusted.`, 'system-msg');
+        }
+
+        function updateUI(data) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('summary').innerText = data.summary;
+        }
+
+        function appendChat(sender, text, cssClass) {
+            const box = document.getElementById('chatBox');
+            box.innerHTML += `<div><span class="${cssClass}">[${sender}]</span> ${text}</div><hr class="my-2">`;
+            box.scrollTop = box.scrollHeight;
+        }
+    </script>
+</body>
+</html>

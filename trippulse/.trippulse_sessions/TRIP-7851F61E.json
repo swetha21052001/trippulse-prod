@@ -1,0 +1,256 @@
+{
+  "trip_id": "TRIP-7851F61E",
+  "user_prefs": {
+    "destination": "Tokyo",
+    "start_date": "2026-09-10",
+    "end_date": "2026-09-13",
+    "total_budget": 2000.0,
+    "travel_style": "balanced",
+    "interests": [
+      "culture",
+      "food",
+      "sightseeing"
+    ],
+    "max_flight_price": 800.0
+  },
+  "flight_options": [
+    {
+      "flight_no": "TO 001",
+      "carrier": "Tokyo Express",
+      "origin": "SFO",
+      "destination": "TOK",
+      "departure_time": "2026-09-10 11:30",
+      "arrival_time": "2026-09-10 15:00 (+1)",
+      "price": 620.0,
+      "risk_score": 0.35,
+      "status": "Scheduled"
+    },
+    {
+      "flight_no": "UA 837",
+      "carrier": "United Airlines",
+      "origin": "SFO",
+      "destination": "TOK",
+      "departure_time": "2026-09-10 10:15",
+      "arrival_time": "2026-09-10 13:55 (+1)",
+      "price": 540.0,
+      "risk_score": 0.22,
+      "status": "Scheduled"
+    },
+    {
+      "flight_no": "DL 105",
+      "carrier": "Delta Air Lines",
+      "origin": "SFO",
+      "destination": "TOK",
+      "departure_time": "2026-09-10 13:45",
+      "arrival_time": "2026-09-10 17:20 (+1)",
+      "price": 590.0,
+      "risk_score": 0.16,
+      "status": "Scheduled"
+    },
+    {
+      "flight_no": "AA 402",
+      "carrier": "American Airlines",
+      "origin": "SFO",
+      "destination": "TOK",
+      "departure_time": "2026-09-10 15:00",
+      "arrival_time": "2026-09-10 18:30 (+1)",
+      "price": 490.0,
+      "risk_score": 0.27,
+      "status": "Scheduled"
+    }
+  ],
+  "selected_flight": {
+    "flight_no": "AA 402",
+    "carrier": "American Airlines",
+    "origin": "SFO",
+    "destination": "TOK",
+    "departure_time": "2026-09-10 15:00",
+    "arrival_time": "2026-09-10 18:30 (+1)",
+    "price": 490.0,
+    "risk_score": 0.27,
+    "status": "Scheduled"
+  },
+  "hotel_options": [
+    {
+      "hotel_id": "HTL-TYO-02",
+      "name": "Hotel Gracery Shinjuku",
+      "location": "Shinjuku, Tokyo",
+      "price_per_night": 160.0,
+      "total_price": 480.0,
+      "rating": 4.4,
+      "amenities": [
+        "Free WiFi",
+        "Central Location",
+        "Indoor Lounge"
+      ],
+      "is_indoor_friendly": true
+    },
+    {
+      "hotel_id": "HTL-TYO-03",
+      "name": "Shibuya Stream Excel Hotel",
+      "location": "Shibuya, Tokyo",
+      "price_per_night": 190.0,
+      "total_price": 570.0,
+      "rating": 4.6,
+      "amenities": [
+        "Gym",
+        "Direct Station Access",
+        "Co-working Space"
+      ],
+      "is_indoor_friendly": true
+    }
+  ],
+  "selected_hotel": {
+    "hotel_id": "HTL-TYO-03",
+    "name": "Shibuya Stream Excel Hotel",
+    "location": "Shibuya, Tokyo",
+    "price_per_night": 190.0,
+    "total_price": 570.0,
+    "rating": 4.6,
+    "amenities": [
+      "Gym",
+      "Direct Station Access",
+      "Co-working Space"
+    ],
+    "is_indoor_friendly": true
+  },
+  "weather_forecast": [
+    {
+      "date": "2026-09-10",
+      "condition": "Partly Cloudy",
+      "temperature_c": 25.0,
+      "rain_probability": 0.3,
+      "risk_level": "low",
+      "indoor_recommended": false
+    },
+    {
+      "date": "2026-09-11",
+      "condition": "Partly Cloudy",
+      "temperature_c": 25.0,
+      "rain_probability": 0.32,
+      "risk_level": "low",
+      "indoor_recommended": false
+    },
+    {
+      "date": "2026-09-13",
+      "condition": "Partly Cloudy",
+      "temperature_c": 25.0,
+      "rain_probability": 0.34,
+      "risk_level": "low",
+      "indoor_recommended": false
+    }
+  ],
+  "activity_plan": [
+    {
+      "activity_id": "ACT-101",
+      "day": 1,
+      "time_slot": "Morning",
+      "name": "Senso-ji Temple & Nakamise Shopping Street",
+      "category": "Cultural",
+      "cost": 0.0,
+      "location": "Old Town, Tokyo",
+      "is_outdoor": true,
+      "rain_alternative": "National History Museum & Covered Arcade",
+      "status": "Confirmed"
+    },
+    {
+      "activity_id": "ACT-102",
+      "day": 1,
+      "time_slot": "Afternoon",
+      "name": "Tokyo Panoramic Tower & Indoor Deck",
+      "category": "Sightseeing",
+      "cost": 28.0,
+      "location": "Downtown, Tokyo",
+      "is_outdoor": false,
+      "rain_alternative": null,
+      "status": "Confirmed"
+    },
+    {
+      "activity_id": "ACT-103",
+      "day": 1,
+      "time_slot": "Evening",
+      "name": "Local Gourmet Food Tour & Night Market",
+      "category": "Dining",
+      "cost": 45.0,
+      "location": "Gourmet Alley, Tokyo",
+      "is_outdoor": true,
+      "rain_alternative": "Covered Food Hall & Bistro Lounge",
+      "status": "Confirmed"
+    },
+    {
+      "activity_id": "ACT-201",
+      "day": 2,
+      "time_slot": "Morning",
+      "name": "Tokyo Botanical Gardens & Promenade Walk",
+      "category": "Outdoor",
+      "cost": 0.0,
+      "location": "Central Park, Tokyo",
+      "is_outdoor": true,
+      "rain_alternative": "Art Gallery & Indoor Japanese Gardens View",
+      "status": "Confirmed"
+    },
+    {
+      "activity_id": "ACT-202",
+      "day": 2,
+      "time_slot": "Afternoon",
+      "name": "Tokyo Landmark Plaza & Shopping District",
+      "category": "Cultural",
+      "cost": 30.0,
+      "location": "Commercial Hub, Tokyo",
+      "is_outdoor": true,
+      "rain_alternative": "Digital Art Exhibition & Indoor Experience",
+      "status": "Confirmed"
+    },
+    {
+      "activity_id": "ACT-203",
+      "day": 2,
+      "time_slot": "Evening",
+      "name": "Skyline Night View & Fine Dining",
+      "category": "Dining",
+      "cost": 60.0,
+      "location": "Waterfront, Tokyo",
+      "is_outdoor": false,
+      "rain_alternative": null,
+      "status": "Confirmed"
+    },
+    {
+      "activity_id": "ACT-301",
+      "day": 3,
+      "time_slot": "Morning",
+      "name": "Tokyo Waterfront Market Food Tasting",
+      "category": "Dining",
+      "cost": 35.0,
+      "location": "Harbor, Tokyo",
+      "is_outdoor": true,
+      "rain_alternative": "Indoor Gourmet Market & Cafe",
+      "status": "Confirmed"
+    },
+    {
+      "activity_id": "ACT-302",
+      "day": 3,
+      "time_slot": "Afternoon",
+      "name": "Tokyo Royal Palace & Grounds Tour",
+      "category": "Outdoor",
+      "cost": 0.0,
+      "location": "Heritage Quarter, Tokyo",
+      "is_outdoor": true,
+      "rain_alternative": "Modern Art Museum & Covered Gallery",
+      "status": "Confirmed"
+    }
+  ],
+  "budget_ledger": {
+    "total_budget": 2000.0,
+    "flight_allocated": 600.0,
+    "hotel_allocated": 700.0,
+    "activity_allocated": 400.0,
+    "contingency_allocated": 300.0,
+    "flight_spent": 490.0,
+    "hotel_spent": 570.0,
+    "activity_spent": 198.0,
+    "remaining_budget": 742.0,
+    "transactions": []
+  },
+  "disruptions": [],
+  "status": "Confirmed",
+  "last_updated": "2026-09-02T16:15:59.096261"
+}
