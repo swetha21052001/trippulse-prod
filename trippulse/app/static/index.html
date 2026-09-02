@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TripPulse — Multi-Agent Travel Concierge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0d14;
+      --bg-card: rgba(22, 27, 38, 0.75);
+      --bg-card-hover: rgba(30, 37, 52, 0.85);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-purple: #8b5cf6;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --glass-blur: blur(16px);
+      --radius-lg: 16px;
+      --radius-md: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.12) 0%, transparent 45%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border-color);
+      backdrop-filter: var(--glass-blur);
+      background: rgba(10, 13, 20, 0.8);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      font-weight: 700;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+    }
+
+    .logo-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 40%, var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-badge {
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    main {
+      flex: 1;
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .content-area {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .planner-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      backdrop-filter: var(--glass-blur);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .planner-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input, select {
+      background: rgba(10, 13, 20, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .btn {
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      color: white;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(59, 130, 246, 0.45);
+    }
+
+    .btn-warning {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--accent-amber);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-warning:hover {
+      background: rgba(245, 158, 11, 0.25);
+    }
+
+    .section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .grid-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .info-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      transition: transform 0.2s;
+    }
+
+    .info-card:hover {
+      transform: translateY(-2px);
+      background: var(--bg-card-hover);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .tag {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .tag-blue { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+    .tag-purple { background: rgba(139, 92, 246, 0.15); color: var(--accent-purple); }
+    .tag-amber { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
+    .tag-rose { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); }
+    .tag-green { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+
+    .itinerary-day {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.75rem;
+    }
+
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .activity-item {
+      background: rgba(10, 13, 20, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.85rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .activity-swapped {
+      border-color: rgba(245, 158, 11, 0.4);
+      background: rgba(245, 158, 11, 0.05);
+    }
+
+    /* Sidebar / Chat Panel */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .widget {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 999px;
+      transition: width 0.3s ease;
+    }
+
+    .chat-box {
+      height: 380px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      padding-right: 0.4rem;
+    }
+
+    .message {
+      max-width: 88%;
+      padding: 0.75rem 1rem;
+      border-radius: 14px;
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .message-agent {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid var(--border-color);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-user {
+      background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-input-area {
+      margin-top: 0.75rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .chat-input {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">TripPulse Concierge</div>
+    </div>
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      Multi-Agent Engine Active
+    </div>
+  </header>
+
+  <main>
+    <div class="content-area">
+      
+      <!-- Trip Form -->
+      <div class="planner-card">
+        <div class="section-title">✨ Create New Trip Plan</div>
+        <div class="planner-form">
+          <div class="form-group">
+            <label>Destination</label>
+            <input type="text" id="destInput" value="Tokyo">
+          </div>
+          <div class="form-group">
+            <label>Budget ($)</label>
+            <input type="number" id="budgetInput" value="2000">
+          </div>
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="date" id="startDateInput" value="2026-09-10">
+          </div>
+          <div class="form-group">
+            <label>End Date</label>
+            <input type="date" id="endDateInput" value="2026-09-13">
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 0.5rem;">
+          <button class="btn btn-primary" id="planBtn">🚀 Orchestrate Multi-Agent Pipeline</button>
+        </div>
+      </div>
+
+      <!-- Disruption Simulator -->
+      <div class="planner-card" style="border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.03);">
+        <div class="section-title" style="color: var(--accent-amber);">⚡ Event-Driven Disruption Simulator</div>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Simulate real-time external events (BigQuery delay risk alerts or live weather disruptions) to trigger automated re-planning.</p>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <button class="btn btn-warning" onclick="triggerDisruption('weather_rain', 'Heavy Rain forecast detected on Day 2')">🌧️ Simulate Day 2 Heavy Rain</button>
+          <button class="btn btn-warning" onclick="triggerDisruption('flight_delay', 'Selected flight delayed by 3 hours')">✈️ Simulate Flight Delay</button>
+        </div>
+      </div>
+
+      <!-- Overview Cards -->
+      <div class="grid-cards">
+        <div class="info-card">
+          <div class="card-header">
+            <div class="card-title">✈️ Selected Flight</div>
+            <span class="tag tag-blue" id="flightStatusTag">Scheduled</span>
+          </div>
+          <div id="flightDetails">Click orchestrate to generate flight plan</div>
+        </div>
+
+        <div class="info-card">
+          <div class="card-header">
+            <div class="card-title">🏨 Selected Hotel</div>
+            <span class="tag tag-purple" id="hotelRatingTag">4.8 ★</span>
+          </div>
+          <div id="hotelDetails">Click orchestrate to generate hotel plan</div>
+        </div>
+      </div>
+
+      <!-- Itinerary -->
+      <div class="section-title">📅 Day-by-Day Dynamic Itinerary</div>
+      <div id="itineraryContainer" style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <!-- Itinerary days rendered here -->
+      </div>
+
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      
+      <!-- Budget Ledger Widget -->
+      <div class="widget">
+        <div class="section-title">💰 Budget Ledger</div>
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.4rem;">
+            <span>Total Spent</span>
+            <span id="spentBudgetLabel" style="font-weight: 700;">$0 / $2000</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="budgetProgress" style="width: 0%;"></div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Flight Allocated</span>
+            <span id="flightSpent">$0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Hotel Allocated</span>
+            <span id="hotelSpent">$0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Activities</span>
+            <span id="activitySpent">$0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding-top: 0.4rem; border-top: 1px solid var(--border-color); font-weight: 600;">
+            <span>Remaining Balance</span>
+            <span id="remainingBudget" style="color: var(--accent-green);">$2000</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Panel -->
+      <div class="widget chat-box">
+        <div class="section-title">💬 Concierge Assistant</div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="message message-agent">Hello! I am your TripPulse Concierge powered by Gemini & Google ADK multi-agent pipeline. Click Orchestrate to generate your trip or ask me anything!</div>
+        </div>
+        <div class="chat-input-area">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Ask about weather, flights, budget..." onkeypress="if(event.key==='Enter') sendMessage()">
+          <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    let currentTripId = "TRIP-DEMO123";
+
+    async function orchestrateTrip() {
+      const btn = document.getElementById("planBtn");
+      const dest = document.getElementById("destInput").value || "Tokyo";
+      const budget = parseFloat(document.getElementById("budgetInput").value) || 2000;
+      const start = document.getElementById("startDateInput").value || "2026-09-10";
+      const end = document.getElementById("endDateInput").value || "2026-09-13";
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `⏳ Orchestrating...`;
+      }
+
+      try {
+        const res = await fetch("/api/plan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ destination: dest, total_budget: budget, start_date: start, end_date: end })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Server returned ${res.status}`);
+        }
+        const data = await res.json();
+        currentTripId = data.trip_id;
+        renderTripState(data.state);
+        appendMessage("agent", data.summary);
+      } catch (err) {
+        console.error("Orchestration error:", err);
+        appendMessage("agent", "❌ **Error Orchestrating Plan:** " + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `🚀 Orchestrate Multi-Agent Pipeline`;
+        }
+      }
+    }
+
+    async function triggerDisruption(type, details) {
+      if (!currentTripId) return alert("Please create a plan first.");
+      try {
+        const res = await fetch("/api/replan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trip_id: currentTripId, disruption_type: type, details: details })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Server returned ${res.status}`);
+        }
+        const data = await res.json();
+        renderTripState(data.state);
+        appendMessage("agent", "⚠️ **Event Disruption Handled:** " + details + "\n\n" + data.summary);
+      } catch (err) {
+        console.error("Replan error:", err);
+        appendMessage("agent", "❌ **Re-planning Error:** " + err.message);
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById("chatInput");
+      const text = input.value.trim();
+      if (!text) return;
+      
+      appendMessage("user", text);
+      input.value = "";
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trip_id: currentTripId, message: text })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Server returned ${res.status}`);
+        }
+        const data = await res.json();
+        appendMessage("agent", data.reply);
+      } catch (err) {
+        console.error("Chat error:", err);
+        appendMessage("agent", "❌ **Chat Error:** " + err.message);
+      }
+    }
+
+    function appendMessage(sender, text) {
+      const container = document.getElementById("chatMessages");
+      const div = document.createElement("div");
+      div.className = `message message-${sender}`;
+
+      // Format basic markdown elements
+      let formatted = text
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+
+      div.innerHTML = formatted;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function renderTripState(state) {
+      // Flight
+      if (state.selected_flight) {
+        const f = state.selected_flight;
+        const fTag = document.getElementById("flightStatusTag");
+        if (fTag) {
+          fTag.innerText = f.status;
+          fTag.className = `tag ${f.status === 'Delayed' ? 'tag-rose' : 'tag-blue'}`;
+        }
+        document.getElementById("flightDetails").innerHTML = `
+          <div style="font-weight:700;">${f.carrier} (${f.flight_no})</div>
+          <div style="font-size:0.85rem; color: var(--text-muted);">${f.departure_time}</div>
+          <div style="font-size:0.85rem; font-weight:600; color:var(--accent-cyan); margin-top:0.2rem;">$${f.price.toFixed(2)} (Delay Risk: ${(f.risk_score*100).toFixed(0)}%)</div>
+        `;
+      }
+
+      // Hotel
+      if (state.selected_hotel) {
+        const h = state.selected_hotel;
+        const hTag = document.getElementById("hotelRatingTag");
+        if (hTag) {
+          hTag.innerText = `${h.rating} ★`;
+        }
+        document.getElementById("hotelDetails").innerHTML = `
+          <div style="font-weight:700;">${h.name}</div>
+          <div style="font-size:0.85rem; color: var(--text-muted);">${h.location}</div>
+          <div style="font-size:0.85rem; font-weight:600; color:var(--accent-purple); margin-top:0.2rem;">$${h.total_price.toFixed(2)} total</div>
+        `;
+      }
+
+      // Budget Ledger
+      const b = state.budget_ledger;
+      const spent = b.flight_spent + b.hotel_spent + b.activity_spent;
+      const pct = Math.min(100, (spent / b.total_budget) * 100);
+      document.getElementById("budgetProgress").style.width = pct + "%";
+      document.getElementById("spentBudgetLabel").innerText = `$${spent.toFixed(2)} / $${b.total_budget.toFixed(2)}`;
+      document.getElementById("flightSpent").innerText = `$${b.flight_spent.toFixed(2)}`;
+      document.getElementById("hotelSpent").innerText = `$${b.hotel_spent.toFixed(2)}`;
+      document.getElementById("activitySpent").innerText = `$${b.activity_spent.toFixed(2)}`;
+      document.getElementById("remainingBudget").innerText = `$${b.remaining_budget.toFixed(2)}`;
+
+      // Itinerary
+      const itinContainer = document.getElementById("itineraryContainer");
+      itinContainer.innerHTML = "";
+
+      const daysMap = {};
+      state.activity_plan.forEach(act => {
+        if (!daysMap[act.day]) daysMap[act.day] = [];
+        daysMap[act.day].push(act);
+      });
+
+      Object.keys(daysMap).sort((a,b) => parseInt(a) - parseInt(b)).forEach(dayNum => {
+        const activities = daysMap[dayNum];
+        const dayIdx = parseInt(dayNum) - 1;
+        const wf = (state.weather_forecast && state.weather_forecast.length > dayIdx) ? state.weather_forecast[dayIdx] : null;
+
+        const dayDiv = document.createElement("div");
+        dayDiv.className = "itinerary-day";
+        
+        let weatherTag = wf ? `<span class="tag ${wf.rain_probability > 0.5 ? 'tag-amber' : 'tag-green'}">🌧️ ${wf.condition} (${(wf.rain_probability*100).toFixed(0)}% rain)</span>` : '';
+
+        dayDiv.innerHTML = `
+          <div class="day-header">
+            <div style="font-weight:700;">Day ${dayNum}</div>
+            ${weatherTag}
+          </div>
+          <div class="activity-list">
+            ${activities.map(act => `
+              <div class="activity-item ${act.status === 'Swapped' ? 'activity-swapped' : ''}">
+                <div>
+                  <div style="font-weight:600; font-size:0.9rem;">${act.name}</div>
+                  <div style="font-size:0.75rem; color:var(--text-muted);">${act.time_slot} • ${act.location}</div>
+                </div>
+                <div style="font-weight:700; font-size:0.85rem; color:var(--accent-blue);">$${act.cost.toFixed(2)}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        itinContainer.appendChild(dayDiv);
+      });
+    }
+
+    document.getElementById("planBtn").addEventListener("click", orchestrateTrip);
+    // Initial run
+    orchestrateTrip();
+  </script>
+</body>
+</html>
