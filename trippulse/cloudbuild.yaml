@@ -45,17 +45,6 @@ steps:
       - '0'
       - '--max-instances'
       - '5' # Adjust max instances as needed
-  # Step 4: Make the service publicly accessible
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: AllowPublic
-    args:
-      - 'run'
-      - 'services'
-      - 'add-iam-policy-binding'
-      - 'trippulse-service'
-      - '--region=us-central1'
-      - '--member=allUsers'
-      - '--role=roles/run.invoker'
 images:
   - 'gcr.io/$PROJECT_ID/trippulse:${_TAG}'
 
