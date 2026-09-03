@@ -20,6 +20,7 @@ ENV ENABLE_BIGQUERY=true
 # Secret placeholders (values should be injected by Cloud Run from Secret Manager at runtime)
 ENV HOTEL_API_KEY=""
 ENV FLIGHT_API_KEY=""
+ENV WEATHER_API_KEY=""
 
 EXPOSE 8080
 

@@ -70,56 +70,32 @@ class ConciergeAgent:
         # Use Vertex AI with Service Account credentials (no API key needed)
         log_agent_decision(self.name, state.trip_id, "Processing user query", {"message": message})
         import os
-        try:
-            from google import genai
+        from google import genai
 
-            project_id = os.getenv("GCP_PROJECT", "trippulse-prod")
-            location = os.getenv("GCP_LOCATION", "us-central1")
+        project_id = os.getenv("GCP_PROJECT", "trippulse-prod")
+        location = os.getenv("GCP_LOCATION", "us-central1")
 
-            client = genai.Client(
-                vertexai=True,
-                project=project_id,
-                location=location
-            )
-            prompt = (
-                f"You are TripPulse Concierge, a helpful AI travel assistant.\n"
-                f"Current Trip Context: Destination: {state.user_prefs.destination}, "
-                f"Budget: ${state.user_prefs.total_budget}, Selected Flight: {state.selected_flight.flight_no if state.selected_flight else 'None'}, "
-                f"Selected Hotel: {state.selected_hotel.name if state.selected_hotel else 'None'}, "
-                f"Remaining Budget: ${state.budget_ledger.remaining_budget:.2f}.\n\n"
-                f"User Query: {message}\n"
-                f"Provide a helpful, polite, concise travel concierge answer."
-            )
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=prompt,
-            )
+        client = genai.Client(
+            vertexai=True,
+            project=project_id,
+            location=location
+        )
+        prompt = (
+            f"You are TripPulse Concierge, a helpful AI travel assistant.\n"
+            f"Current Trip Context: Destination: {state.user_prefs.destination}, "
+            f"Budget: ${state.user_prefs.total_budget}, Selected Flight: {state.selected_flight.flight_no if state.selected_flight else 'None'}, "
+            f"Selected Hotel: {state.selected_hotel.name if state.selected_hotel else 'None'}, "
+            f"Remaining Budget: ${state.budget_ledger.remaining_budget:.2f}.\n\n"
+            f"User Query: {message}\n"
+            f"Provide a helpful, polite, concise travel concierge answer."
+        )
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+        )
 
-            extracted = self._extract_text(response)
-            if extracted:
-                log_agent_decision(self.name, state.trip_id, "AI response generated successfully")
-                return extracted
-        except Exception:
-            log_agent_decision(self.name, state.trip_id, "AI generation failed, falling back to rule-based logic")
-
-        # Fallback response rules
-        msg_lower = message.lower()
-        if "weather" in msg_lower or "rain" in msg_lower:
-            if state.weather_forecast:
-                forecast_text = "\n".join([f"• {wf.date}: {wf.condition} (Rain Risk: {int(wf.rain_probability*100)}%, Temp: {wf.temperature_c}°C)" for wf in state.weather_forecast])
-                return f"Here is the weather forecast for your trip to {state.user_prefs.destination}:\n\n{forecast_text}"
-            return "Weather details will be available once your trip is planned."
-
-        if "flight" in msg_lower:
-            if state.selected_flight:
-                f = state.selected_flight
-                log_agent_decision(self.name, state.trip_id, "Providing flight status info")
-                return f"Your selected flight is **{f.carrier} {f.flight_no}** departing at {f.departure_time}. Ticket price: ${f.price:.2f}. Historical delay risk score is {f.risk_score * 100:.0f}%."
-            return "No flight has been selected yet."
-
-        if "budget" in msg_lower or "cost" in msg_lower:
-            b = state.budget_ledger
-            log_agent_decision(self.name, state.trip_id, "Providing budget breakdown")
-            return f"Your budget summary for {state.user_prefs.destination}:\n• Total Budget: ${b.total_budget:.2f}\n• Flights: ${b.flight_spent:.2f}\n• Hotel: ${b.hotel_spent:.2f}\n• Activities: ${b.activity_spent:.2f}\n• Remaining: ${b.remaining_budget:.2f}"
-
-        return self.generate_trip_summary(state)
+        extracted = self._extract_text(response)
+        if not extracted:
+            raise RuntimeError("Gemini returned an empty response")
+        log_agent_decision(self.name, state.trip_id, "AI response generated successfully")
+        return extracted

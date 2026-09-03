@@ -138,6 +138,11 @@ touch app/data/weather.py
 5. Create collections `hotel_cache` and `activity_cache` (can be done programmatically instead of manually).
 5. Create collections `hotel-cache` and `activity-cache` (can be done programmatically instead of manually).
 
+**Console — Google Weather API**
+1. Enable the **Weather API** in Google Cloud APIs & Services.
+2. Create a restricted Google Maps Platform API key with access to the Weather API.
+3. Store it in Secret Manager as `WEATHER_API_KEY`.
+
 **Local**
 ```bash
 touch app/data/hotels.py app/data/activities.py

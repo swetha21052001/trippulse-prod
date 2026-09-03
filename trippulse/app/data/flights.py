@@ -6,7 +6,7 @@ from app.utils.logger import track_latency
 from app.models.trip_state import FlightOption
 
 def get_secret(secret_name: str) -> Optional[str]:
-    """Retrieves secret from GCP Secret Manager if available, otherwise returns env var or fallback."""
+    """Retrieves a secret from the environment or GCP Secret Manager."""
     env_val = os.getenv(secret_name.upper().replace('-', '_'))
     if env_val:
         return env_val
@@ -17,16 +17,12 @@ def get_secret(secret_name: str) -> Optional[str]:
         name = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
         response = client.access_secret_version(request={"name": name})
         return response.payload.data.decode("UTF-8")
-    except Exception:
-        return None
+    except Exception as exc:
+        raise RuntimeError(f"Unable to retrieve secret '{secret_name}'") from exc
 
 def query_bigquery_delay_risk(carrier: str, origin: str, destination: str, hour: Optional[int] = None) -> float:
     """Queries BigQuery BTS historical delay dataset by route, carrier, and hour."""
-    # Baseline probabilistic calculation if BigQuery is offline or no credentials
-    seed_str = f"{carrier}-{origin}-{destination}-{hour or 0}"
-    hash_val = sum(ord(c) for c in seed_str)
-    base_risk = 0.12 + (hash_val % 25) / 100.0
-    return round(base_risk, 2)
+    raise NotImplementedError("BigQuery delay-risk queries are not implemented")
 
 def flight_risk_score(flight_no: str, date: str, origin: str = "SFO", destination: str = "TYO", departure_time: str = "") -> float:
     """Computes risk score for a flight number."""
@@ -70,9 +66,9 @@ def fetch_flights_from_api(origin: str, destination: str) -> List[Dict[str, Any]
     """Calls external flight status API (AviationStack) to fetch schedules."""
     api_key = get_secret("flight-api-key")
     if not api_key:
-        return []
+        raise RuntimeError("Flight API key is not configured")
 
-    url = "http://api.aviationstack.com/v1/flights"
+    url = "https://api.aviationstack.com/v1/flights"
     params = {
         "access_key": api_key,
         "dep_iata": origin,
@@ -82,8 +78,7 @@ def fetch_flights_from_api(origin: str, destination: str) -> List[Dict[str, Any]
     
     try:
         resp = requests.get(url, params=params, timeout=5)
-        if resp.status_code != 200:
-            return []
+        resp.raise_for_status()
         
         results = resp.json().get("data", [])
         candidates = []
@@ -93,8 +88,9 @@ def fetch_flights_from_api(origin: str, destination: str) -> List[Dict[str, Any]
             dep = r.get("departure", {})
             arr = r.get("arrival", {})
             
-            # Flight status APIs typically don't provide prices; simulating for orchestration
-            price = 450.0 + (random.random() * 300.0)
+            price = r.get("price")
+            if price is None:
+                raise RuntimeError("Flight API response did not include a price")
             
             candidates.append({
                 "flight_no": f"{airline.get('iata', 'XX')} {flight.get('number', '000')}",
@@ -103,30 +99,21 @@ def fetch_flights_from_api(origin: str, destination: str) -> List[Dict[str, Any]
                 "arrival": arr.get('scheduled', '15:00').split('T')[-1][:5],
                 "price": round(price, 2)
             })
+        if not candidates:
+            raise RuntimeError("Flight API returned no flight data")
         return candidates
-    except Exception:
-        return []
+    except requests.HTTPError as exc:
+        detail = exc.response.text[:500] if exc.response is not None else str(exc)
+        raise RuntimeError(f"Flight API returned HTTP {exc.response.status_code}: {detail}") from exc
+    except requests.RequestException as exc:
+        raise RuntimeError(f"Flight API request failed: {exc}") from exc
 
 def search_flights(origin: str, destination: str, date: str, max_price: Optional[float] = None) -> List[FlightOption]:
     """Returns candidate flight options for origin -> destination."""
     dest_code = destination[:3].upper() if len(destination) >= 3 else "TYO"
     orig_code = origin[:3].upper() if len(origin) >= 3 else "SFO"
 
-    # 1. Attempt Live API Fetch
     raw_candidates = fetch_flights_from_api(orig_code, dest_code)
-
-    # 2. Fallback to Catalog
-    if not raw_candidates:
-        raw_candidates = CITY_FLIGHT_CATALOG.get(dest_code)
-
-    # 3. Final Dynamic Generator Fallback
-    if not raw_candidates:
-        raw_candidates = [
-            {"flight_no": f"{dest_code[:2]} 001", "carrier": f"{destination.title()} Express", "departure": "11:30", "arrival": "15:00 (+1)", "price": 620.0},
-            {"flight_no": f"UA 837", "carrier": "United Airlines", "departure": "10:15", "arrival": "13:55 (+1)", "price": 540.0},
-            {"flight_no": f"DL 105", "carrier": "Delta Air Lines", "departure": "13:45", "arrival": "17:20 (+1)", "price": 590.0},
-            {"flight_no": f"AA 402", "carrier": "American Airlines", "departure": "15:00", "arrival": "18:30 (+1)", "price": 490.0},
-        ]
 
     options = []
     for candidate in raw_candidates:

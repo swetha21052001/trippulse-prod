@@ -29,22 +29,21 @@ def get_places_api_key() -> Optional[str]:
         name = f"projects/{project_id}/secrets/hotel-api-key/versions/latest"
         response = client.access_secret_version(request={"name": name})
         return response.payload.data.decode("UTF-8")
-    except Exception:
-        return None
+    except Exception as exc:
+        raise RuntimeError("Unable to retrieve Places API key") from exc
 
 def fetch_activities_from_places(location: str, num_days: int) -> List[ActivityPlan]:
     """Calls Google Places API to discover tourist attractions."""
     api_key = get_places_api_key()
     if not api_key:
-        return []
+        raise RuntimeError("Places API key is not configured")
 
     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
     params = {"query": f"top attractions and things to do in {location}", "key": api_key}
     
     try:
         resp = requests.get(url, params=params, timeout=5)
-        if resp.status_code != 200:
-            return []
+        resp.raise_for_status()
         
         results = resp.json().get("results", [])
         activities = []
@@ -67,9 +66,11 @@ def fetch_activities_from_places(location: str, num_days: int) -> List[ActivityP
                 rain_alternative=None,
                 status="Confirmed"
             ))
+        if not activities:
+            raise RuntimeError("Places API returned no activity data")
         return activities
-    except Exception:
-        return []
+    except requests.RequestException as exc:
+        raise RuntimeError("Places activity request failed") from exc
 
 INDOOR_ALTERNATIVES_CATALOG = [
     {
@@ -159,6 +160,9 @@ def search_activities(destination: str, num_days: int = 3) -> List[ActivityPlan]
 
     # 1. Try Places API Discovery
     activities = fetch_activities_from_places(destination, num_days)
+
+    if not activities:
+        raise RuntimeError("Places API returned no activities")
 
     if not activities:
         # 2. Fallback to Local Catalog
@@ -315,59 +319,25 @@ def get_indoor_alternatives(location: str, date: str, preference_tags: Optional[
             pass
 
     api_key = get_places_api_key()
-    if api_key:
-        try:
-            url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
-            params = {"query": f"indoor museums and galleries in {location}", "key": api_key}
-            resp = requests.get(url, params=params, timeout=5)
-            if resp.status_code == 200:
-                results = resp.json().get("results", [])
-                alts = []
-                for r in results[:3]:
-                    alts.append({
-                        "name": r["name"],
-                        "category": "Cultural/Indoor",
-                        "cost": 22.0,
-                        "location": r.get("formatted_address", location),
-                        "is_outdoor": False,
-                        "description": f"Top rated indoor attraction in {location}"
-                    })
-                if alts:
-                    if db:
-                        try:
-                            db.collection("activity-cache").document(cache_key).set({
-                                "alternatives": alts,
-                                "cached_at": datetime.now().isoformat()
-                            })
-                        except Exception: pass
-                    return alts
-        except Exception:
-            pass
+    if not api_key:
+        raise RuntimeError("Places API key is not configured")
 
-    city_title = location.title().strip()
-    return [
+    url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+    params = {"query": f"indoor museums and galleries in {location}", "key": api_key}
+    resp = requests.get(url, params=params, timeout=5)
+    resp.raise_for_status()
+    results = resp.json().get("results", [])
+    alternatives = [
         {
-            "name": f"Grand Museum of Fine Arts ({city_title})",
-            "category": "Cultural",
+            "name": result["name"],
+            "category": "Cultural/Indoor",
             "cost": 22.0,
-            "location": f"Art District, {city_title}",
+            "location": result.get("formatted_address", location),
             "is_outdoor": False,
-            "description": "Panoramic indoor observatory and art gallery."
-        },
-        {
-            "name": f"Digital Immersive Light & Sound Exhibition ({city_title})",
-            "category": "Cultural",
-            "cost": 32.0,
-            "location": f"Innovation Center, {city_title}",
-            "is_outdoor": False,
-            "description": "Interactive indoor digital exhibition."
-        },
-        {
-            "name": f"Historical Covered Market & Food Lounge ({city_title})",
-            "category": "Dining",
-            "cost": 18.0,
-            "location": f"Old Town, {city_title}",
-            "is_outdoor": False,
-            "description": "Covered historical market and food hall."
+            "description": f"Top rated indoor attraction in {location}"
         }
+        for result in results[:3]
     ]
+    if not alternatives:
+        raise RuntimeError("Places API returned no indoor alternatives")
+    return alternatives

@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from typing import List
 from app.models.trip_state import TripState, DisruptionEvent, ActivityPlan
 from app.data.weather import get_weather_forecast
@@ -12,7 +13,12 @@ class WeatherAgent:
     def process(self, state: TripState) -> TripState:
         log_agent_decision(self.name, state.trip_id, "Starting weather and activity processing", {"destination": state.user_prefs.destination})
         prefs = state.user_prefs
-        dates = [prefs.start_date, "2026-09-11", prefs.end_date]
+        start_date = date.fromisoformat(prefs.start_date)
+        end_date = date.fromisoformat(prefs.end_date)
+        dates = [
+            (start_date + timedelta(days=offset)).isoformat()
+            for offset in range((end_date - start_date).days + 1)
+        ]
         
         # 1. Fetch Forecast if not already set
         if not state.weather_forecast:

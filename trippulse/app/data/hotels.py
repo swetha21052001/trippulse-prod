@@ -19,7 +19,7 @@ def get_firestore_client():
         return None
 
 def get_hotel_api_key() -> Optional[str]:
-    """Retrieves Google Places API key from Secret Manager or environment."""
+    """Retrieves the Google Places API key from the environment or Secret Manager."""
     api_key = os.getenv("HOTEL_API_KEY")
     if api_key:
         return api_key
@@ -30,23 +30,22 @@ def get_hotel_api_key() -> Optional[str]:
         name = f"projects/{project_id}/secrets/hotel-api-key/versions/latest"
         response = client.access_secret_version(request={"name": name})
         return response.payload.data.decode("UTF-8")
-    except Exception:
-        return None
+    except Exception as exc:
+        raise RuntimeError("Unable to retrieve hotel API key") from exc
 
 @track_latency("google_places_fetch_hotels")
 def fetch_from_places_api(location: str, nights: int) -> List[HotelOption]:
     """Calls Google Places API to discover hotels in the target location."""
     api_key = get_hotel_api_key()
     if not api_key:
-        return []
+        raise RuntimeError("Hotel API key is not configured")
 
     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
     params = {"query": f"top rated hotels in {location}", "type": "lodging", "key": api_key}
     
     try:
         resp = requests.get(url, params=params, timeout=5)
-        if resp.status_code != 200:
-            return []
+        resp.raise_for_status()
         
         results = resp.json().get("results", [])
         hotels = []
@@ -63,9 +62,11 @@ def fetch_from_places_api(location: str, nights: int) -> List[HotelOption]:
                 amenities=r.get("types", ["lodging"]),
                 is_indoor_friendly=True
             ))
+        if not hotels:
+            raise RuntimeError("Places API returned no hotel data")
         return hotels
-    except Exception:
-        return []
+    except requests.RequestException as exc:
+        raise RuntimeError("Places hotel request failed") from exc
 
 CITY_HOTEL_CATALOG = {
     "TOKYO": [
@@ -121,54 +122,15 @@ def search_hotels(location: str, check_in: str, check_out: str, budget_limit: Op
         except Exception:
             pass
 
-    city_key = location.upper().strip()
-    candidates = CITY_HOTEL_CATALOG.get(city_key)
+    hotels = fetch_from_places_api(location, _calculate_nights(check_in, check_out))
+    if not hotels:
+        raise RuntimeError("Places API returned no hotel options")
 
-    if not candidates:
-        # Dynamic fallback generator for any city
-        candidates = [
-            {
-                "hotel_id": f"HTL-{city_key[:3]}-01",
-                "name": f"Grand Palace Hotel {location.title()}",
-                "location": f"City Center, {location.title()}",
-                "price_per_night": 220.0,
-                "total_price": 660.0,
-                "rating": 4.7,
-                "amenities": ["Executive Spa", "Panoramic Lounge", "Fine Dining"],
-                "is_indoor_friendly": True
-            },
-            {
-                "hotel_id": f"HTL-{city_key[:3]}-02",
-                "name": f"Boutique Heritage Suites {location.title()}",
-                "location": f"Old Town, {location.title()}",
-                "price_per_night": 160.0,
-                "total_price": 480.0,
-                "rating": 4.5,
-                "amenities": ["Free Breakfast", "Central Location", "Indoor Lounge"],
-                "is_indoor_friendly": True
-            },
-            {
-                "hotel_id": f"HTL-{city_key[:3]}-03",
-                "name": f"Urban Stay Express {location.title()}",
-                "location": f"Downtown, {location.title()}",
-                "price_per_night": 130.0,
-                "total_price": 390.0,
-                "rating": 4.3,
-                "amenities": ["Co-working Space", "Fitness Center", "Fast WiFi"],
-                "is_indoor_friendly": True
-            }
-        ]
+    if budget_limit is not None:
+        hotels = [hotel for hotel in hotels if hotel.total_price <= budget_limit]
 
-    hotels = []
-    for c in candidates:
-        if budget_limit and c["total_price"] > budget_limit:
-            continue
-        hotels.append(HotelOption(**c))
-
-    # If all candidate hotels exceeded budget limit, pick lowest cost candidate
-    if not hotels and candidates:
-        cheapest = min(candidates, key=lambda x: x["total_price"])
-        hotels.append(HotelOption(**cheapest))
+    if not hotels:
+        raise RuntimeError("Places API returned no hotels within the requested budget")
 
     HOTEL_CACHE[cache_key] = hotels
 
