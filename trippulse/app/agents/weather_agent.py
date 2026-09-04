@@ -22,8 +22,17 @@ class WeatherAgent:
         
         # 1. Fetch Forecast if not already set
         if not state.weather_forecast:
-            forecasts = get_weather_forecast(prefs.destination, dates)
-            log_agent_decision(self.name, state.trip_id, "Fetched weather forecast", {"num_days": len(forecasts)})
+            try:
+                forecasts = get_weather_forecast(prefs.destination, dates)
+                log_agent_decision(self.name, state.trip_id, "Fetched weather forecast", {"num_days": len(forecasts)})
+            except Exception as exc:
+                forecasts = []
+                log_agent_decision(
+                    self.name,
+                    state.trip_id,
+                    "Weather forecast unavailable; continuing without forecast data",
+                    {"destination": prefs.destination, "error": str(exc)},
+                )
             state.weather_forecast = forecasts
         else:
             forecasts = state.weather_forecast

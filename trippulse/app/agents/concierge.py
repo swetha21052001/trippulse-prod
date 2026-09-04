@@ -1,3 +1,5 @@
+import json
+import os
 from typing import Dict, Any, Optional
 
 from app.models.trip_state import TripState
@@ -64,7 +66,30 @@ class ConciergeAgent:
 
         summary.append(f"💰 **Budget Summary:** Spent ${state.user_prefs.total_budget - ledger.remaining_budget:.2f} of ${ledger.total_budget:.2f} (Remaining: ${ledger.remaining_budget:.2f})")
 
-        return "\n\n".join(summary)
+        fallback_summary = "\n\n".join(summary)
+        try:
+            from google import genai
+
+            client = genai.Client(
+                vertexai=True,
+                project=os.getenv("GCP_PROJECT", "trippulse-prod"),
+                location=os.getenv("GCP_LOCATION", "us-central1"),
+            )
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=(
+                    "Rewrite this trip summary to be concise and useful. Preserve every "
+                    "price, date, selected option, and warning. Return plain text only.\n"
+                    + json.dumps(fallback_summary)
+                ),
+            )
+            generated = self._extract_text(response)
+            if generated:
+                log_agent_decision(self.name, state.trip_id, "Gemini trip summary generated successfully")
+                return generated
+        except Exception as exc:
+            log_agent_decision(self.name, state.trip_id, "Gemini summary unavailable; using deterministic summary", {"error": str(exc)})
+        return fallback_summary
 
     def respond(self, message: str, state: TripState) -> str:
         # Use Vertex AI with Service Account credentials (no API key needed)

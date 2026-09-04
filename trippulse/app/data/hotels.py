@@ -122,7 +122,12 @@ def search_hotels(location: str, check_in: str, check_out: str, budget_limit: Op
         except Exception:
             pass
 
-    hotels = fetch_from_places_api(location, _calculate_nights(check_in, check_out))
+    try:
+        hotels = fetch_from_places_api(location, _calculate_nights(check_in, check_out))
+    except RuntimeError:
+        dest_key = location.upper().strip()
+        catalog = CITY_HOTEL_CATALOG.get(dest_key, [])
+        hotels = [HotelOption(**hotel) for hotel in catalog]
     if not hotels:
         raise RuntimeError("Places API returned no hotel options")
 

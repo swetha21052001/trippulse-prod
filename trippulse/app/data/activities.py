@@ -158,14 +158,13 @@ def search_activities(destination: str, num_days: int = 3) -> List[ActivityPlan]
         except Exception:
             pass
 
-    # 1. Try Places API Discovery
-    activities = fetch_activities_from_places(destination, num_days)
+    # 1. Try Places API Discovery, then use the local catalog if unavailable.
+    try:
+        activities = fetch_activities_from_places(destination, num_days)
+    except RuntimeError:
+        activities = []
 
     if not activities:
-        raise RuntimeError("Places API returned no activities")
-
-    if not activities:
-        # 2. Fallback to Local Catalog
         dest_key = destination.upper().strip()
         catalog = CITY_ACTIVITY_CATALOG.get(dest_key)
         

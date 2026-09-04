@@ -36,7 +36,11 @@ def flight_risk_score(flight_no: str, date: str, origin: str = "SFO", destinatio
         except ValueError:
             pass
             
-    return query_bigquery_delay_risk(carrier, origin, destination, hour)
+    try:
+        return query_bigquery_delay_risk(carrier, origin, destination, hour)
+    except (NotImplementedError, RuntimeError):
+        # Keep planning available until the historical risk data source is configured.
+        return 0.15
 
 CITY_FLIGHT_CATALOG = {
     "PAR": [
@@ -59,6 +63,16 @@ CITY_FLIGHT_CATALOG = {
         {"flight_no": "VS 020", "carrier": "Virgin Atlantic", "departure": "17:45", "arrival": "11:55 (+1)", "price": 690.0},
         {"flight_no": "UA 930", "carrier": "United Airlines", "departure": "19:50", "arrival": "14:10 (+1)", "price": 630.0},
     ]
+}
+
+DESTINATION_IATA_CODES = {
+    "TOKYO": "TYO",
+    "PARIS": "PAR",
+    "LISBON": "LIS",
+    "NEW YORK": "NYC",
+    "LONDON": "LON",
+    "SINGAPORE": "SIN",
+    "CHICAGO": "CHI",
 }
 
 @track_latency("aviationstack_fetch_flights")
@@ -110,10 +124,13 @@ def fetch_flights_from_api(origin: str, destination: str) -> List[Dict[str, Any]
 
 def search_flights(origin: str, destination: str, date: str, max_price: Optional[float] = None) -> List[FlightOption]:
     """Returns candidate flight options for origin -> destination."""
-    dest_code = destination[:3].upper() if len(destination) >= 3 else "TYO"
+    dest_code = DESTINATION_IATA_CODES.get(destination.upper().strip(), destination[:3].upper() if len(destination) >= 3 else "TYO")
     orig_code = origin[:3].upper() if len(origin) >= 3 else "SFO"
 
-    raw_candidates = fetch_flights_from_api(orig_code, dest_code)
+    try:
+        raw_candidates = fetch_flights_from_api(orig_code, dest_code)
+    except RuntimeError:
+        raw_candidates = CITY_FLIGHT_CATALOG.get(dest_code, [])
 
     options = []
     for candidate in raw_candidates:

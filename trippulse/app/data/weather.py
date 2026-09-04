@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 from typing import List, Dict, Any
 from app.models.trip_state import WeatherForecast
@@ -8,10 +9,42 @@ DESTINATION_COORDS = {
     "TOKYO": (35.6762, 139.6503),
     "LISBON": (38.7223, -9.1393),
     "PARIS": (48.8566, 2.3522),
+    "CHICAGO": (41.8781, -87.6298),
     "NEW YORK": (40.7128, -74.0060),
     "LONDON": (51.5074, -0.1278),
     "SINGAPORE": (1.3521, 103.8198),
 }
+
+def _coordinates_from_gemini(destination: str) -> tuple[float, float]:
+    """Resolve an unconfigured destination with Gemini and validate its coordinates."""
+    from google import genai
+
+    client = genai.Client(
+        vertexai=True,
+        project=os.getenv("GCP_PROJECT", "trippulse-prod"),
+        location=os.getenv("GCP_LOCATION", "us-central1"),
+    )
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=(
+            "Return only a JSON object with numeric latitude and longitude for "
+            f"the city or destination {destination!r}. Do not include markdown."
+        ),
+    )
+    raw_text = getattr(response, "text", "")
+    coordinates = json.loads(raw_text)
+    latitude = float(coordinates["latitude"])
+    longitude = float(coordinates["longitude"])
+    if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
+        raise ValueError("Gemini returned coordinates outside valid geographic ranges")
+    return latitude, longitude
+
+def resolve_destination_coords(destination: str) -> tuple[float, float]:
+    """Return configured coordinates or a validated Gemini fallback."""
+    dest_key = destination.upper().strip()
+    if dest_key in DESTINATION_COORDS:
+        return DESTINATION_COORDS[dest_key]
+    return _coordinates_from_gemini(destination)
 
 def fetch_google_forecast(lat: float, lon: float, days: int) -> Dict[str, Dict[str, Any]]:
     """Fetches daily forecast data from Google Weather API."""
@@ -54,10 +87,7 @@ def fetch_google_forecast(lat: float, lon: float, days: int) -> Dict[str, Dict[s
 
 def get_weather_forecast(destination: str, dates: List[str]) -> List[WeatherForecast]:
     """Generates weather forecasts for a list of travel dates."""
-    dest_key = destination.upper().strip()
-    if dest_key not in DESTINATION_COORDS:
-        raise ValueError(f"No coordinates configured for destination: {destination}")
-    lat, lon = DESTINATION_COORDS[dest_key]
+    lat, lon = resolve_destination_coords(destination)
     forecast_data = fetch_google_forecast(lat, lon, len(dates))
     forecasts = []
     for date in dates:
