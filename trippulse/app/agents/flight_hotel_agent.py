@@ -27,7 +27,10 @@ class FlightHotelAgent:
             f"Flights: {json.dumps([f.model_dump() for f in flights])}\n"
             f"Hotels: {json.dumps([h.model_dump() for h in hotels])}"
         )
-        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+        response = client.models.generate_content(
+            model=os.getenv("GCP_MODEL", "gemini-2.5-flash"),
+            contents=prompt,
+        )
         choice = json.loads(getattr(response, "text", ""))
         flight_index = int(choice["flight_index"])
         hotel_index = int(choice["hotel_index"])

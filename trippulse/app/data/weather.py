@@ -25,7 +25,7 @@ def _coordinates_from_gemini(destination: str) -> tuple[float, float]:
         location=os.getenv("GCP_LOCATION", "us-central1"),
     )
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model=os.getenv("GCP_MODEL", "gemini-2.5-flash"),
         contents=(
             "Return only a JSON object with numeric latitude and longitude for "
             f"the city or destination {destination!r}. Do not include markdown."

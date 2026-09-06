@@ -34,7 +34,7 @@ steps:
       - '--service-account'
       - 'trippulse-agent-sa@$PROJECT_ID.iam.gserviceaccount.com' # Your service account
       - '--set-env-vars'
-      - 'GCP_PROJECT=$PROJECT_ID,GCP_LOCATION=$_REGION,ENABLE_FIRESTORE=true,ENABLE_BIGQUERY=true'
+      - 'GCP_PROJECT=$PROJECT_ID,GCP_LOCATION=$_REGION,GCP_MODEL=$_MODEL,ENABLE_FIRESTORE=true,ENABLE_BIGQUERY=true'
       - '--set-secrets'
       - 'HOTEL_API_KEY=HOTEL_API_KEY:latest,FLIGHT_API_KEY=FLIGHT_API_KEY:latest,WEATHER_API_KEY=WEATHER_API_KEY:latest'
       - '--cpu'
@@ -51,3 +51,4 @@ images:
 substitutions:
   _TAG: 'latest'
   _REGION: 'us-central1'
+  _MODEL: 'gemini-2.5-flash'

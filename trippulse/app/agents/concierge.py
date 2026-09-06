@@ -76,7 +76,7 @@ class ConciergeAgent:
                 location=os.getenv("GCP_LOCATION", "us-central1"),
             )
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model=os.getenv("GCP_MODEL", "gemini-2.5-flash"),
                 contents=(
                     "Rewrite this trip summary to be concise and useful. Preserve every "
                     "price, date, selected option, and warning. Return plain text only.\n"
@@ -115,7 +115,7 @@ class ConciergeAgent:
             f"Provide a helpful, polite, concise travel concierge answer."
         )
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=os.getenv("GCP_MODEL", "gemini-2.5-flash"),
             contents=prompt,
         )
 
