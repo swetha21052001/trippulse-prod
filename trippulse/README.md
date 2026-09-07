@@ -246,11 +246,11 @@ touch app/data/ledger.py
 ```bash
 mkdir -p app/api
 touch app/api/main.py
-# FastAPI app exposing POST /chat, wired to the ADK Runner + concierge agent
+# FastAPI app exposing trip planning and replanning endpoints
 ```
 ```bash
 uvicorn app.api.main:app --reload --port 8080
-# test locally: curl -X POST localhost:8080/chat -d '{"message":"plan my trip to Lisbon"}'
+# test locally with POST /api/plan; the dashboard renders the returned day-by-day itinerary
 ```
 
 ### 5.2 Frontend
@@ -260,7 +260,7 @@ uvicorn app.api.main:app --reload --port 8080
 npx create-react-app trippulse-ui
 cd trippulse-ui
 npm install axios
-# Build a day-by-day itinerary card view + chat panel calling POST /chat
+# Build a day-by-day itinerary card view calling the planning API
 npm start   # runs on localhost:3000
 ```
 *(Alternative for a fast prototype: `pip install streamlit` and build a single-file Streamlit app instead of React.)*

@@ -91,36 +91,3 @@ class ConciergeAgent:
             log_agent_decision(self.name, state.trip_id, "Gemini summary unavailable; using deterministic summary", {"error": str(exc)})
         return fallback_summary
 
-    def respond(self, message: str, state: TripState) -> str:
-        # Use Vertex AI with Service Account credentials (no API key needed)
-        log_agent_decision(self.name, state.trip_id, "Processing user query", {"message": message})
-        import os
-        from google import genai
-
-        project_id = os.getenv("GCP_PROJECT", "trippulse-prod")
-        location = os.getenv("GCP_LOCATION", "us-central1")
-
-        client = genai.Client(
-            vertexai=True,
-            project=project_id,
-            location=location
-        )
-        prompt = (
-            f"You are TripPulse Concierge, a helpful AI travel assistant.\n"
-            f"Current Trip Context: Destination: {state.user_prefs.destination}, "
-            f"Budget: ${state.user_prefs.total_budget}, Selected Flight: {state.selected_flight.flight_no if state.selected_flight else 'None'}, "
-            f"Selected Hotel: {state.selected_hotel.name if state.selected_hotel else 'None'}, "
-            f"Remaining Budget: ${state.budget_ledger.remaining_budget:.2f}.\n\n"
-            f"User Query: {message}\n"
-            f"Provide a helpful, polite, concise travel concierge answer."
-        )
-        response = client.models.generate_content(
-            model=os.getenv("GCP_MODEL", "gemini-2.5-flash"),
-            contents=prompt,
-        )
-
-        extracted = self._extract_text(response)
-        if not extracted:
-            raise RuntimeError("Gemini returned an empty response")
-        log_agent_decision(self.name, state.trip_id, "AI response generated successfully")
-        return extracted

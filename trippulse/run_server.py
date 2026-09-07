@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from fastapi import FastAPI, Request, HTTPException, Body
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -16,10 +16,6 @@ class ReplanRequest(BaseModel):
     trip_id: str
     disruption_type: str
     details: str = ""
-
-class ChatRequest(BaseModel):
-    trip_id: str
-    message: str
 
 def serialize_state(state):
     if hasattr(state, "model_dump"):
@@ -65,16 +61,6 @@ async def replan_trip(req: ReplanRequest):
         "trip_id": req.trip_id,
         "state": serialize_state(state),
         "summary": global_orchestrator.concierge.generate_trip_summary(state),
-    }
-
-@app.post("/api/chat")
-async def chat(req: ChatRequest):
-    state = global_orchestrator.session_store.load(req.trip_id)
-    if state is None:
-        raise HTTPException(status_code=404, detail="Trip not found")
-    return { # type: ignore
-        "reply": global_orchestrator.concierge.respond(req.message, state),
-        "trip_id": req.trip_id,
     }
 
 @app.post("/api/disruption/webhook")
