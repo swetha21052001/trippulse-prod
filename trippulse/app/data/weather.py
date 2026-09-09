@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+from datetime import date
 from typing import List, Dict, Any
 from app.models.trip_state import WeatherForecast
 from app.utils.rate_limiter import global_rate_limiter
@@ -14,6 +15,7 @@ DESTINATION_COORDS = {
     "LONDON": (51.5074, -0.1278),
     "SINGAPORE": (1.3521, 103.8198),
 }
+GOOGLE_WEATHER_MAX_DAYS = 10
 
 def _coordinates_from_gemini(destination: str) -> tuple[float, float]:
     """Resolve an unconfigured destination with Gemini and validate its coordinates."""
@@ -88,12 +90,22 @@ def fetch_google_forecast(lat: float, lon: float, days: int) -> Dict[str, Dict[s
 def get_weather_forecast(destination: str, dates: List[str]) -> List[WeatherForecast]:
     """Generates weather forecasts for a list of travel dates."""
     lat, lon = resolve_destination_coords(destination)
-    forecast_data = fetch_google_forecast(lat, lon, len(dates))
+    requested_dates = [date.fromisoformat(travel_date) for travel_date in dates]
+    forecast_days = (max(requested_dates) - date.today()).days + 1
+    if forecast_days > GOOGLE_WEATHER_MAX_DAYS:
+        raise RuntimeError(
+            f"Google Weather API only supports forecasts up to {GOOGLE_WEATHER_MAX_DAYS} days ahead"
+        )
+    forecast_data = fetch_google_forecast(
+        lat,
+        lon,
+        max(1, min(GOOGLE_WEATHER_MAX_DAYS, forecast_days)),
+    )
     forecasts = []
-    for date in dates:
-        if date not in forecast_data:
-            raise RuntimeError(f"Google Weather API returned no forecast for {date}")
-        day_data = forecast_data[date]
+    for travel_date in dates:
+        if travel_date not in forecast_data:
+            raise RuntimeError(f"Google Weather API returned no forecast for {travel_date}")
+        day_data = forecast_data[travel_date]
         prob = day_data["rain_probability"]
         if prob >= 0.65:
             risk = "high"
@@ -109,7 +121,7 @@ def get_weather_forecast(destination: str, dates: List[str]) -> List[WeatherFore
             indoor = False
 
         forecasts.append(WeatherForecast(
-            date=date,
+            date=travel_date,
             condition=day_data["condition"],
             temperature_c=day_data["temperature_c"],
             rain_probability=prob,

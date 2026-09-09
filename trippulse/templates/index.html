@@ -9,6 +9,7 @@
         body { background-color: #f8f9fa; }
         .trip-summary { white-space: pre-wrap; background: #e9ecef; padding: 20px; border-radius: 8px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .itinerary-day { border-left: 4px solid #0d6efd; }
+        .weather-update { background: #e8f4ff; border-left: 4px solid #0d6efd; }
     </style>
 </head>
 <body>
@@ -57,10 +58,16 @@
             <div class="col-md-7">
                 <div id="dashboard" style="display:none;">
                     <h3>Trip Dashboard</h3>
+                    <div id="weatherUpdate" class="weather-update rounded p-3 mb-4"></div>
                     <div id="summary" class="trip-summary mb-4"></div>
 
                     <h3>Planned Itinerary</h3>
                     <div id="itinerary" class="mt-3"></div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <button id="previousDay" class="btn btn-outline-primary" type="button" onclick="showPreviousDay()">Previous</button>
+                        <span id="dayPosition" class="text-muted small"></span>
+                        <button id="nextDay" class="btn btn-primary" type="button" onclick="showNextDay()">Next</button>
+                    </div>
                 </div>
                 <div id="loading" class="text-center mt-5" style="display:none;">
                     <div class="spinner-border text-primary" role="status"></div>
@@ -75,6 +82,9 @@
 
     <script>
         let currentTripId = null;
+        let itineraryDays = [];
+        let currentDayIndex = 0;
+        let dailyForecast = [];
 
         document.getElementById('planForm').onsubmit = async (e) => {
             e.preventDefault();
@@ -119,48 +129,110 @@
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('summary').innerText = data.summary;
-            renderItinerary(data.state.activity_plan || []);
+            dailyForecast = data.state.weather_forecast || [];
+            renderWeather(dailyForecast);
+            prepareItinerary(data.state.activity_plan || []);
         }
 
-        function renderItinerary(activities) {
+        function renderWeather(forecast) {
+            const weatherUpdate = document.getElementById('weatherUpdate');
+            weatherUpdate.replaceChildren();
+
+            const heading = document.createElement('h5');
+            heading.className = 'mb-1';
+            heading.textContent = 'Weather update';
+            weatherUpdate.appendChild(heading);
+
+            const details = document.createElement('div');
+            details.className = 'text-muted';
+            if (!forecast.length) {
+                details.textContent = 'Weather data is currently unavailable.';
+            } else {
+                details.textContent = forecast.map(day =>
+                    `${day.date}: ${day.condition}, ${day.temperature_c.toFixed(1)}°C, ${Math.round(day.rain_probability * 100)}% rain chance`
+                ).join(' | ');
+            }
+            weatherUpdate.appendChild(details);
+        }
+
+        function prepareItinerary(activities) {
+            const groupedDays = {};
+            activities.forEach(activity => {
+                if (!groupedDays[activity.day]) groupedDays[activity.day] = [];
+                groupedDays[activity.day].push(activity);
+            });
+            itineraryDays = Object.keys(groupedDays)
+                .sort((a, b) => Number(a) - Number(b))
+                .map(day => ({day, activities: groupedDays[day]}));
+            currentDayIndex = 0;
+            renderItinerary();
+        }
+
+        function renderItinerary() {
             const itinerary = document.getElementById('itinerary');
             itinerary.replaceChildren();
 
-            if (!activities.length) {
+            if (!itineraryDays.length) {
                 itinerary.textContent = 'No activities are currently planned.';
+                updateDayControls();
                 return;
             }
 
-            const days = {};
-            activities.forEach(activity => {
-                if (!days[activity.day]) days[activity.day] = [];
-                days[activity.day].push(activity);
+            const selectedDay = itineraryDays[currentDayIndex];
+            const daySection = document.createElement('section');
+            daySection.className = 'itinerary-day bg-white border rounded p-3 mb-3';
+
+            const heading = document.createElement('h5');
+            heading.textContent = `Day ${selectedDay.day}`;
+            daySection.appendChild(heading);
+
+            const weather = dailyForecast[Number(selectedDay.day) - 1];
+            const weatherDetails = document.createElement('div');
+            weatherDetails.className = 'text-muted small mb-2';
+            weatherDetails.textContent = weather
+                ? `${weather.date} | ${weather.condition} | ${Number(weather.temperature_c).toFixed(1)}°C | ${Math.round(weather.rain_probability * 100)}% rain chance`
+                : 'Daily weather data is currently unavailable.';
+            daySection.appendChild(weatherDetails);
+
+            selectedDay.activities.forEach(activity => {
+                const item = document.createElement('div');
+                item.className = 'border-top pt-2 mt-2';
+                const title = document.createElement('strong');
+                title.textContent = `${activity.time_slot}: ${activity.name}`;
+                item.appendChild(title);
+
+                const details = document.createElement('div');
+                details.className = 'text-muted small';
+                details.textContent = `${activity.category} | ${activity.location} | $${Number(activity.cost).toFixed(2)}${activity.status === 'Swapped' ? ' | Indoor alternative' : ''}`;
+                item.appendChild(details);
+                daySection.appendChild(item);
             });
 
-            Object.keys(days).sort((a, b) => Number(a) - Number(b)).forEach(day => {
-                const daySection = document.createElement('section');
-                daySection.className = 'itinerary-day bg-white border rounded p-3 mb-3';
+            itinerary.appendChild(daySection);
+            updateDayControls();
+        }
 
-                const heading = document.createElement('h5');
-                heading.textContent = `Day ${day}`;
-                daySection.appendChild(heading);
+        function updateDayControls() {
+            const hasDays = itineraryDays.length > 0;
+            document.getElementById('previousDay').disabled = !hasDays || currentDayIndex === 0;
+            document.getElementById('nextDay').disabled = !hasDays || currentDayIndex === itineraryDays.length - 1;
+            document.getElementById('dayPosition').textContent = hasDays
+                ? `Day ${currentDayIndex + 1} of ${itineraryDays.length}`
+                : '';
+        }
 
-                days[day].forEach(activity => {
-                    const item = document.createElement('div');
-                    item.className = 'border-top pt-2 mt-2';
-                    const title = document.createElement('strong');
-                    title.textContent = `${activity.time_slot}: ${activity.name}`;
-                    item.appendChild(title);
+        function showPreviousDay() {
+            if (currentDayIndex > 0) {
+                currentDayIndex -= 1;
+                renderItinerary();
+            }
+        }
 
-                    const details = document.createElement('div');
-                    details.className = 'text-muted small';
-                    details.textContent = `${activity.category} | ${activity.location} | $${activity.cost.toFixed(2)}${activity.status === 'Swapped' ? ' | Indoor alternative' : ''}`;
-                    item.appendChild(details);
-                    daySection.appendChild(item);
-                });
-
-                itinerary.appendChild(daySection);
-            });
+        function showNextDay() {
+            if (currentDayIndex < itineraryDays.length - 1) {
+                currentDayIndex += 1;
+                renderItinerary();
+            }
         }
     </script>
 </body>
