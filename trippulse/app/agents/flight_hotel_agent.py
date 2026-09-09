@@ -6,7 +6,7 @@ from app.data.flights import search_flights
 from app.data.hotels import search_hotels
 from app.utils.logger import log_agent_decision
 
-BASE_HOTEL_BUDGET = 700.0
+BASE_HOTEL_BUDGET = 1200.0
 
 class FlightHotelAgent:
     """Agent responsible for sourcing, evaluating, and selecting flight and hotel options."""

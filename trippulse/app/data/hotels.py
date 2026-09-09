@@ -159,7 +159,16 @@ def search_hotels(location: str, check_in: str, check_out: str, budget_limit: Op
         hotels = [hotel for hotel in hotels if hotel.total_price <= budget_limit]
 
     if not hotels:
-        raise RuntimeError("Places API returned no hotels within the requested budget")
+        hotels = [
+            hotel
+            for hotel in _generic_hotel_catalog(
+                location,
+                _calculate_nights(check_in, check_out),
+            )
+            if budget_limit is None or hotel.total_price <= budget_limit
+        ]
+    if not hotels:
+        raise RuntimeError("No hotels are available within the requested budget")
 
     HOTEL_CACHE[cache_key] = hotels
 
