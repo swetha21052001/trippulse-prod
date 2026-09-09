@@ -6,23 +6,107 @@
     <title>TripPulse Concierge</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; }
-        .trip-summary { white-space: pre-wrap; background: #e9ecef; padding: 20px; border-radius: 8px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .itinerary-day { border-left: 4px solid #0d6efd; }
-        .weather-update { background: #e8f4ff; border-left: 4px solid #0d6efd; }
+        :root {
+            --ink: #162333;
+            --muted: #667487;
+            --line: #dce4ec;
+            --paper: #ffffff;
+            --wash: #f3f7fa;
+            --accent: #0b7285;
+            --accent-dark: #075766;
+        }
+
+        body {
+            min-height: 100vh;
+            color: var(--ink);
+            background: linear-gradient(135deg, #eef6f7 0%, #f8fafb 45%, #edf1f5 100%);
+            font-family: Georgia, 'Times New Roman', serif;
+        }
+
+        .app-shell { max-width: 1240px; }
+        .brand-mark {
+            color: var(--accent-dark);
+            font-size: .78rem;
+            font-weight: 700;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+        .page-title { font-size: clamp(2rem, 4vw, 3.4rem); letter-spacing: -.03em; }
+        .eyebrow {
+            color: var(--accent);
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+        .panel {
+            background: rgba(255, 255, 255, .88);
+            border: 1px solid rgba(220, 228, 236, .95);
+            border-radius: 14px;
+            box-shadow: 0 18px 45px rgba(30, 53, 72, .08);
+        }
+        .planner-panel { position: sticky; top: 1.5rem; }
+        .form-label { color: var(--muted); font-size: .82rem; font-weight: 700; }
+        .form-control {
+            border-color: var(--line);
+            border-radius: 8px;
+            padding: .7rem .8rem;
+        }
+        .form-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 .2rem rgba(11, 114, 133, .12);
+        }
+        .btn-primary {
+            border: 0;
+            background: var(--accent-dark);
+            border-radius: 8px;
+            font-weight: 700;
+            padding: .75rem 1rem;
+        }
+        .btn-primary:hover { background: #064653; }
+        .trip-summary {
+            white-space: pre-wrap;
+            color: #354556;
+            background: var(--wash);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 1.25rem;
+            line-height: 1.7;
+        }
+        .dashboard-heading { border-bottom: 1px solid var(--line); }
+        .itinerary-day {
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-top: 4px solid var(--accent);
+            border-radius: 10px;
+            box-shadow: 0 12px 30px rgba(30, 53, 72, .06);
+        }
+        .activity-item { border-color: var(--line) !important; }
+        .activity-title { color: var(--ink); font-size: 1.03rem; }
+        .activity-details { color: var(--muted); font-size: .86rem; }
+        .day-controls { background: var(--wash); border-radius: 10px; padding: .6rem; }
+        .day-controls .btn { border-radius: 7px; font-size: .86rem; font-weight: 700; }
+        @media (max-width: 767px) {
+            .planner-panel { position: static; }
+            .page-title { font-size: 2.25rem; }
+        }
     </style>
 </head>
 <body>
-    <div class="container py-5">
-        <header class="pb-3 mb-4 border-bottom">
-            <span class="fs-4">🚀 TripPulse Multi-Agent Concierge</span>
+    <div class="container app-shell py-4 py-md-5">
+        <header class="mb-5">
+            <div class="brand-mark mb-3">TripPulse / Concierge</div>
+            <h1 class="page-title mb-2">Plan a trip with room to wander.</h1>
+            <p class="text-secondary mb-0">A considered itinerary for the places, pace, and budget you have in mind.</p>
         </header>
 
-        <div class="row g-5">
+        <div class="row g-4 g-xl-5 align-items-start">
             <!-- Planning Form -->
-            <div class="col-md-5">
-                <h3>Plan a New Trip</h3>
-                <form id="planForm" class="p-4 border rounded bg-white">
+            <div class="col-lg-4">
+                <div class="panel planner-panel p-4 p-lg-4">
+                    <div class="eyebrow mb-2">Start here</div>
+                    <h2 class="h4 mb-4">Build your trip</h2>
+                    <form id="planForm">
                     <div class="mb-3">
                         <label class="form-label">Destination</label>
                         <input type="text" id="dest" class="form-control" placeholder="e.g. Tokyo" required>
@@ -41,50 +125,52 @@
                             <input type="date" id="end" class="form-control" value="2026-09-13" required>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Generate Itinerary</button>
-                </form>
-
-                <hr class="my-4">
-
-                <h3>Disruption Simulation</h3>
-                <div class="p-4 border rounded bg-white">
-                    <p class="text-muted small">Trigger the re-planning pipeline manually:</p>
-                    <button class="btn btn-outline-warning mb-2 w-100" onclick="simulateDisruption('flight_delay')">Simulate Flight Delay</button>
-                    <button class="btn btn-outline-info w-100" onclick="simulateDisruption('weather_rain')">Simulate Bad Weather</button>
+                        <button type="submit" class="btn btn-primary w-100">Generate itinerary</button>
+                    </form>
                 </div>
+
             </div>
 
             <!-- Dashboard & Itinerary -->
-            <div class="col-md-7">
+            <div class="col-lg-8">
                 <div id="dashboard" style="display:none;">
-                    <h3>Trip Dashboard</h3>
-                    <div id="weatherUpdate" class="weather-update rounded p-3 mb-4"></div>
-                    <div id="summary" class="trip-summary mb-4"></div>
+                    <div class="dashboard-heading d-flex justify-content-between align-items-end gap-3 pb-3 mb-4">
+                        <div>
+                            <div class="eyebrow mb-2">Your itinerary</div>
+                            <h2 class="h3 mb-0">Trip dashboard</h2>
+                        </div>
+                        <span class="text-secondary small">Ready to explore</span>
+                    </div>
+                    <div id="summary" class="trip-summary mb-5"></div>
 
-                    <h3>Planned Itinerary</h3>
-                    <div id="itinerary" class="mt-3"></div>
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <button id="previousDay" class="btn btn-outline-primary" type="button" onclick="showPreviousDay()">Previous</button>
-                        <span id="dayPosition" class="text-muted small"></span>
-                        <button id="nextDay" class="btn btn-primary" type="button" onclick="showNextDay()">Next</button>
+                    <div class="d-flex justify-content-between align-items-end mb-3">
+                        <div>
+                            <div class="eyebrow mb-1">Day by day</div>
+                            <h2 class="h4 mb-0">Planned itinerary</h2>
+                        </div>
+                    </div>
+                    <div id="itinerary"></div>
+                    <div class="day-controls d-flex justify-content-between align-items-center mt-3">
+                        <button id="previousDay" class="btn btn-outline-secondary" type="button" onclick="showPreviousDay()">Previous day</button>
+                        <span id="dayPosition" class="text-secondary small fw-semibold"></span>
+                        <button id="nextDay" class="btn btn-primary" type="button" onclick="showNextDay()">Next day</button>
                     </div>
                 </div>
-                <div id="loading" class="text-center mt-5" style="display:none;">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p class="mt-2">Orchestrating agents and querying data providers...</p>
+                <div id="loading" class="panel text-center p-5" style="display:none;">
+                    <div class="spinner-border" style="color: var(--accent);" role="status"></div>
+                    <p class="text-secondary mt-3 mb-0">Crafting your itinerary...</p>
                 </div>
-                <div id="welcome" class="text-center mt-5">
-                    <p class="text-muted">Enter trip details on the left to start the multi-agent discovery process.</p>
+                <div id="welcome" class="panel p-5 text-center">
+                    <div class="eyebrow mb-2">A good trip starts with a blank page</div>
+                    <p class="text-secondary mb-0">Enter your trip details to begin planning.</p>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        let currentTripId = null;
         let itineraryDays = [];
         let currentDayIndex = 0;
-        let dailyForecast = [];
 
         document.getElementById('planForm').onsubmit = async (e) => {
             e.preventDefault();
@@ -109,50 +195,14 @@
             });
             const data = await res.json();
             
-            currentTripId = data.trip_id;
             updateUI(data);
         };
-
-        async function simulateDisruption(type) {
-            if (!currentTripId) return alert('Please plan a trip first!');
-            
-            const res = await fetch('/api/replan', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({trip_id: currentTripId, disruption_type: type, details: "Manual simulation trigger"})
-            });
-            const data = await res.json();
-            updateUI(data);
-        }
 
         function updateUI(data) {
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('summary').innerText = data.summary;
-            dailyForecast = data.state.weather_forecast || [];
-            renderWeather(dailyForecast);
             prepareItinerary(data.state.activity_plan || []);
-        }
-
-        function renderWeather(forecast) {
-            const weatherUpdate = document.getElementById('weatherUpdate');
-            weatherUpdate.replaceChildren();
-
-            const heading = document.createElement('h5');
-            heading.className = 'mb-1';
-            heading.textContent = 'Weather update';
-            weatherUpdate.appendChild(heading);
-
-            const details = document.createElement('div');
-            details.className = 'text-muted';
-            if (!forecast.length) {
-                details.textContent = 'Weather data is currently unavailable.';
-            } else {
-                details.textContent = forecast.map(day =>
-                    `${day.date}: ${day.condition}, ${day.temperature_c.toFixed(1)}°C, ${Math.round(day.rain_probability * 100)}% rain chance`
-                ).join(' | ');
-            }
-            weatherUpdate.appendChild(details);
         }
 
         function prepareItinerary(activities) {
@@ -180,29 +230,23 @@
 
             const selectedDay = itineraryDays[currentDayIndex];
             const daySection = document.createElement('section');
-            daySection.className = 'itinerary-day bg-white border rounded p-3 mb-3';
+            daySection.className = 'itinerary-day p-3 p-md-4 mb-3';
 
             const heading = document.createElement('h5');
+            heading.className = 'mb-1';
             heading.textContent = `Day ${selectedDay.day}`;
             daySection.appendChild(heading);
 
-            const weather = dailyForecast[Number(selectedDay.day) - 1];
-            const weatherDetails = document.createElement('div');
-            weatherDetails.className = 'text-muted small mb-2';
-            weatherDetails.textContent = weather
-                ? `${weather.date} | ${weather.condition} | ${Number(weather.temperature_c).toFixed(1)}°C | ${Math.round(weather.rain_probability * 100)}% rain chance`
-                : 'Daily weather data is currently unavailable.';
-            daySection.appendChild(weatherDetails);
-
             selectedDay.activities.forEach(activity => {
                 const item = document.createElement('div');
-                item.className = 'border-top pt-2 mt-2';
+                item.className = 'activity-item border-top pt-3 mt-3';
                 const title = document.createElement('strong');
+                title.className = 'activity-title d-block';
                 title.textContent = `${activity.time_slot}: ${activity.name}`;
                 item.appendChild(title);
 
                 const details = document.createElement('div');
-                details.className = 'text-muted small';
+                details.className = 'activity-details mt-1';
                 details.textContent = `${activity.category} | ${activity.location} | $${Number(activity.cost).toFixed(2)}${activity.status === 'Swapped' ? ' | Indoor alternative' : ''}`;
                 item.appendChild(details);
                 daySection.appendChild(item);
