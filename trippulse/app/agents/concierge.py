@@ -64,7 +64,8 @@ class ConciergeAgent:
         if state.activity_plan:
             summary.append(f"📅 **Itinerary:** {len(state.activity_plan)} curated activities across {len(set(act.day for act in state.activity_plan))} days.")
 
-        summary.append(f"💰 **Budget Summary:** Spent ${state.user_prefs.total_budget - ledger.remaining_budget:.2f} of ${ledger.total_budget:.2f} (Remaining: ${ledger.remaining_budget:.2f})")
+        total_cost = ledger.flight_spent + ledger.hotel_spent + ledger.activity_spent
+        summary.append(f"💰 **Total Trip Cost:** ${total_cost:.2f}")
 
         fallback_summary = "\n\n".join(summary)
         try:
@@ -79,7 +80,7 @@ class ConciergeAgent:
                 model=os.getenv("GCP_MODEL", "gemini-2.5-flash"),
                 contents=(
                     "Rewrite this trip summary to be concise and useful. Preserve every "
-                    "price, date, selected option, and warning. Return plain text only.\n"
+                    "price, date, selected option, warning, and total trip cost. Return plain text only.\n"
                     + json.dumps(fallback_summary)
                 ),
             )

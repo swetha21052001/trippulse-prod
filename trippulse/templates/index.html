@@ -73,6 +73,21 @@
             padding: 1.25rem;
             line-height: 1.7;
         }
+        .hotel-card {
+            background: #fffaf0;
+            border: 1px solid #eadfca;
+            border-radius: 10px;
+            padding: 1.1rem 1.25rem;
+        }
+        .hotel-meta { color: var(--muted); font-size: .86rem; }
+        .total-cost {
+            background: var(--accent-dark);
+            border-radius: 10px;
+            color: #fff;
+            padding: 1rem 1.25rem;
+        }
+        .total-cost-label { color: #b9e3e5; font-size: .78rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+        .total-cost-value { font-size: 1.8rem; font-weight: 700; }
         .dashboard-heading { border-bottom: 1px solid var(--line); }
         .itinerary-day {
             background: var(--paper);
@@ -84,6 +99,14 @@
         .activity-item { border-color: var(--line) !important; }
         .activity-title { color: var(--ink); font-size: 1.03rem; }
         .activity-details { color: var(--muted); font-size: .86rem; }
+        .day-weather {
+            color: var(--accent-dark);
+            background: #edf7f7;
+            border-radius: 7px;
+            display: inline-block;
+            font-size: .82rem;
+            padding: .35rem .6rem;
+        }
         .day-controls { background: var(--wash); border-radius: 10px; padding: .6rem; }
         .day-controls .btn { border-radius: 7px; font-size: .86rem; font-weight: 700; }
         @media (max-width: 767px) {
@@ -95,7 +118,7 @@
 <body>
     <div class="container app-shell py-4 py-md-5">
         <header class="mb-5">
-            <div class="brand-mark mb-3">TripPulse / Concierge</div>
+            <div class="brand-mark mb-3">TripPulse</div>
             <h1 class="page-title mb-2">Plan a trip with room to wander.</h1>
             <p class="text-secondary mb-0">A considered itinerary for the places, pace, and budget you have in mind.</p>
         </header>
@@ -110,10 +133,6 @@
                     <div class="mb-3">
                         <label class="form-label">Destination</label>
                         <input type="text" id="dest" class="form-control" placeholder="e.g. Tokyo" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Total Budget ($)</label>
-                        <input type="number" id="budget" class="form-control" value="2000" required>
                     </div>
                     <div class="row">
                         <div class="col mb-3">
@@ -142,6 +161,8 @@
                         <span class="text-secondary small">Ready to explore</span>
                     </div>
                     <div id="summary" class="trip-summary mb-5"></div>
+                    <div id="totalCost" class="total-cost mb-5"></div>
+                    <div id="hotel" class="hotel-card mb-5" style="display:none;"></div>
 
                     <div class="d-flex justify-content-between align-items-end mb-3">
                         <div>
@@ -171,6 +192,7 @@
     <script>
         let itineraryDays = [];
         let currentDayIndex = 0;
+        let dailyForecast = [];
 
         document.getElementById('planForm').onsubmit = async (e) => {
             e.preventDefault();
@@ -180,7 +202,6 @@
 
             const payload = {
                 destination: document.getElementById('dest').value,
-                total_budget: parseFloat(document.getElementById('budget').value),
                 start_date: document.getElementById('start').value,
                 end_date: document.getElementById('end').value,
                 interests: ["culture", "food", "sightseeing"],
@@ -202,7 +223,45 @@
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('summary').innerText = data.summary;
+            dailyForecast = data.state.weather_forecast || [];
+            renderTotalCost(data.state.budget_ledger || {});
+            renderHotel(data.state.selected_hotel);
             prepareItinerary(data.state.activity_plan || []);
+        }
+
+        function renderTotalCost(ledger) {
+            const totalCost = Number(ledger.flight_spent || 0)
+                + Number(ledger.hotel_spent || 0)
+                + Number(ledger.activity_spent || 0);
+            document.getElementById('totalCost').innerHTML = `
+                <div class="total-cost-label">Calculated total trip cost</div>
+                <div class="total-cost-value">$${totalCost.toFixed(2)}</div>
+            `;
+        }
+
+        function renderHotel(hotel) {
+            const hotelCard = document.getElementById('hotel');
+            hotelCard.replaceChildren();
+            if (!hotel) {
+                hotelCard.style.display = 'none';
+                return;
+            }
+
+            hotelCard.style.display = 'block';
+            const label = document.createElement('div');
+            label.className = 'eyebrow mb-2';
+            label.textContent = 'Stay';
+            hotelCard.appendChild(label);
+
+            const name = document.createElement('h3');
+            name.className = 'h5 mb-1';
+            name.textContent = hotel.name;
+            hotelCard.appendChild(name);
+
+            const details = document.createElement('div');
+            details.className = 'hotel-meta';
+            details.textContent = `${hotel.location} | ${Number(hotel.rating).toFixed(1)} stars | $${Number(hotel.total_price).toFixed(2)} total`;
+            hotelCard.appendChild(details);
         }
 
         function prepareItinerary(activities) {
@@ -236,6 +295,14 @@
             heading.className = 'mb-1';
             heading.textContent = `Day ${selectedDay.day}`;
             daySection.appendChild(heading);
+
+            const weather = dailyForecast[Number(selectedDay.day) - 1];
+            const weatherDetails = document.createElement('div');
+            weatherDetails.className = 'day-weather mt-2';
+            weatherDetails.textContent = weather
+                ? `${weather.date} | ${weather.condition} | ${Number(weather.temperature_c).toFixed(1)}°C | ${Math.round(weather.rain_probability * 100)}% rain chance`
+                : 'Daily weather data is currently unavailable.';
+            daySection.appendChild(weatherDetails);
 
             selectedDay.activities.forEach(activity => {
                 const item = document.createElement('div');

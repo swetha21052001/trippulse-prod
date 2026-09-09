@@ -6,6 +6,8 @@ from app.data.flights import search_flights
 from app.data.hotels import search_hotels
 from app.utils.logger import log_agent_decision
 
+BASE_HOTEL_BUDGET = 700.0
+
 class FlightHotelAgent:
     """Agent responsible for sourcing, evaluating, and selecting flight and hotel options."""
     def __init__(self, name: str = "FlightHotelAgent"):
@@ -65,19 +67,20 @@ class FlightHotelAgent:
             state.budget_ledger.flight_spent = best_flight.price
 
         # 2. Search Hotels
-        num_nights = 3
-        max_hotel_budget = (prefs.total_budget * 0.4) # allocate ~40% max to hotel
         try:
             hotels = search_hotels(
                 location=prefs.destination,
                 check_in=prefs.start_date,
                 check_out=prefs.end_date,
-                budget_limit=max_hotel_budget
+                budget_limit=BASE_HOTEL_BUDGET
             )
         except Exception as exc:
             hotels = []
             log_agent_decision(self.name, state.trip_id, "Hotel discovery unavailable; continuing without hotels", {"error": str(exc)})
-        log_agent_decision(self.name, state.trip_id, "Hotels searched", {"count": len(hotels), "max_budget": max_hotel_budget})
+        log_agent_decision(self.name, state.trip_id, "Hotels searched", {
+            "count": len(hotels),
+            "base_budget": BASE_HOTEL_BUDGET,
+        })
         state.hotel_options = hotels
 
         # Pick best hotel (highest rating within budget)
