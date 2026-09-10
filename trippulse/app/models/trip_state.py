@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 
 class UserPrefs(BaseModel):
+    origin: str = "SFO"
     destination: str = "Tokyo"
     start_date: str = "2026-09-10"
     end_date: str = "2026-09-13"

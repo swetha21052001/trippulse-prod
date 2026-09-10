@@ -6,7 +6,7 @@ from app.data.flights import search_flights
 from app.data.hotels import search_hotels
 from app.utils.logger import log_agent_decision
 
-BASE_HOTEL_BUDGET = 1200.0
+BASE_HOTEL_BUDGET = 2000.0
 
 class FlightHotelAgent:
     """Agent responsible for sourcing, evaluating, and selecting flight and hotel options."""
@@ -47,7 +47,7 @@ class FlightHotelAgent:
         # 1. Search Flights
         try:
             flights = search_flights(
-                origin="SFO",
+                origin=prefs.origin,
                 destination=prefs.destination,
                 date=prefs.start_date,
                 max_price=prefs.max_flight_price

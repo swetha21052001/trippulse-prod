@@ -79,6 +79,12 @@
             border-radius: 10px;
             padding: 1.1rem 1.25rem;
         }
+        .flight-card {
+            background: #eef7f8;
+            border: 1px solid #cbe3e5;
+            border-radius: 10px;
+            padding: 1.1rem 1.25rem;
+        }
         .hotel-meta { color: var(--muted); font-size: .86rem; }
         .total-cost {
             background: var(--accent-dark);
@@ -131,6 +137,10 @@
                     <h2 class="h4 mb-4">Build your trip</h2>
                     <form id="planForm">
                     <div class="mb-3">
+                        <label class="form-label" for="origin">Origin</label>
+                        <input type="text" id="origin" class="form-control" value="San Francisco" placeholder="e.g. San Francisco" required>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Destination</label>
                         <input type="text" id="dest" class="form-control" placeholder="e.g. Tokyo" required>
                     </div>
@@ -162,7 +172,19 @@
                     </div>
                     <div id="summary" class="trip-summary mb-5"></div>
                     <div id="totalCost" class="total-cost mb-5"></div>
+                    <div id="flight" class="flight-card mb-3" style="display:none;"></div>
                     <div id="hotel" class="hotel-card mb-5" style="display:none;"></div>
+                    <div class="day-controls p-3 mb-5">
+                        <div class="eyebrow mb-1">Simulation</div>
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <span class="text-secondary small">Test trip disruption handling</span>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button id="flightDelayButton" class="btn btn-outline-secondary" type="button" onclick="simulateDisruption('flight_delay', 'Simulated flight delay')">Simulate flight delay</button>
+                                <button id="heavyRainButton" class="btn btn-primary" type="button" onclick="simulateDisruption('weather_rain', 'Simulated heavy rain')">Simulate heavy rain</button>
+                            </div>
+                        </div>
+                        <div id="disruptionMessage" class="small text-secondary mt-2" role="status"></div>
+                    </div>
 
                     <div class="d-flex justify-content-between align-items-end mb-3">
                         <div>
@@ -193,6 +215,7 @@
         let itineraryDays = [];
         let currentDayIndex = 0;
         let dailyForecast = [];
+        let currentTripId = null;
 
         document.getElementById('planForm').onsubmit = async (e) => {
             e.preventDefault();
@@ -201,6 +224,7 @@
             document.getElementById('welcome').style.display = 'none';
 
             const payload = {
+                origin: document.getElementById('origin').value,
                 destination: document.getElementById('dest').value,
                 start_date: document.getElementById('start').value,
                 end_date: document.getElementById('end').value,
@@ -222,11 +246,55 @@
         function updateUI(data) {
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
+            currentTripId = data.trip_id || currentTripId;
             document.getElementById('summary').innerText = data.summary;
-            dailyForecast = data.state.weather_forecast || [];
-            renderTotalCost(data.state.budget_ledger || {});
-            renderHotel(data.state.selected_hotel);
-            prepareItinerary(data.state.activity_plan || []);
+            renderState(data.state);
+        }
+
+        function renderState(state) {
+            dailyForecast = state.weather_forecast || [];
+            renderTotalCost(state.budget_ledger || {});
+            renderFlight(state.selected_flight);
+            renderHotel(state.selected_hotel);
+            prepareItinerary(state.activity_plan || []);
+        }
+
+        async function simulateDisruption(disruptionType, details) {
+            const message = document.getElementById('disruptionMessage');
+            const buttons = [
+                document.getElementById('flightDelayButton'),
+                document.getElementById('heavyRainButton')
+            ];
+
+            if (!currentTripId) {
+                message.textContent = 'Generate a trip before simulating a disruption.';
+                return;
+            }
+
+            buttons.forEach(button => { button.disabled = true; });
+            message.textContent = 'Replanning your trip...';
+
+            try {
+                const response = await fetch('/api/replan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        trip_id: currentTripId,
+                        disruption_type: disruptionType,
+                        details
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Unable to replan this trip.');
+
+                document.getElementById('summary').innerText = data.summary;
+                renderState(data.state);
+                message.textContent = 'Simulation complete. Trip updated.';
+            } catch (error) {
+                message.textContent = error.message;
+            } finally {
+                buttons.forEach(button => { button.disabled = false; });
+            }
         }
 
         function renderTotalCost(ledger) {
@@ -262,6 +330,31 @@
             details.className = 'hotel-meta';
             details.textContent = `${hotel.location} | ${Number(hotel.rating).toFixed(1)} stars | $${Number(hotel.total_price).toFixed(2)} total`;
             hotelCard.appendChild(details);
+        }
+
+        function renderFlight(flight) {
+            const flightCard = document.getElementById('flight');
+            flightCard.replaceChildren();
+            if (!flight) {
+                flightCard.style.display = 'none';
+                return;
+            }
+
+            flightCard.style.display = 'block';
+            const label = document.createElement('div');
+            label.className = 'eyebrow mb-2';
+            label.textContent = 'Flight';
+            flightCard.appendChild(label);
+
+            const name = document.createElement('h3');
+            name.className = 'h5 mb-1';
+            name.textContent = `${flight.carrier} | ${flight.flight_no}`;
+            flightCard.appendChild(name);
+
+            const details = document.createElement('div');
+            details.className = 'hotel-meta';
+            details.textContent = `${flight.origin} to ${flight.destination} | Depart ${flight.departure_time} | Arrive ${flight.arrival_time} | ${flight.status || 'Scheduled'} | $${Number(flight.price).toFixed(2)}`;
+            flightCard.appendChild(details);
         }
 
         function prepareItinerary(activities) {

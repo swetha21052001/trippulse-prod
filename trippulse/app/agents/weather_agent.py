@@ -10,7 +10,7 @@ class WeatherAgent:
     def __init__(self, name: str = "WeatherAgent"):
         self.name = name
 
-    def process(self, state: TripState) -> TripState:
+    def process(self, state: TripState, force_rain: bool = False) -> TripState:
         log_agent_decision(self.name, state.trip_id, "Starting weather and activity processing", {"destination": state.user_prefs.destination})
         prefs = state.user_prefs
         start_date = date.fromisoformat(prefs.start_date)
@@ -44,7 +44,13 @@ class WeatherAgent:
 
         # 3. Evaluate rain risks per day
         for forecast in forecasts:
-            if forecast.rain_probability > 0.60:
+            if force_rain:
+                forecast.condition = "Heavy Rain"
+                forecast.rain_probability = 0.95
+                forecast.risk_level = "high"
+                forecast.indoor_recommended = True
+
+            if force_rain or forecast.rain_probability > 0.60:
                 day_num = dates.index(forecast.date) + 1
                 log_agent_decision(self.name, state.trip_id, "High rain probability detected", {"date": forecast.date, "probability": forecast.rain_probability})
                 

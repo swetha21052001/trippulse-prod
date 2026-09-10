@@ -1,5 +1,5 @@
 import os
-import random
+import json
 import requests
 from typing import List, Dict, Any, Optional
 from app.utils.logger import track_latency
@@ -75,10 +75,50 @@ DESTINATION_IATA_CODES = {
     "CHICAGO": "CHI",
 }
 
+
+def _resolve_iata_codes_with_gemini(origin: str, destination: str) -> tuple[str, str]:
+    """Resolve origin and destination names to validated IATA airport codes."""
+    from google import genai
+
+    client = genai.Client(
+        vertexai=True,
+        project=os.getenv("GCP_PROJECT", "trippulse-prod"),
+        location=os.getenv("GCP_LOCATION", "us-central1"),
+    )
+    response = client.models.generate_content(
+        model=os.getenv("GCP_MODEL", "gemini-2.5-flash"),
+        contents=(
+            "Return only JSON with three-letter uppercase IATA airport codes for "
+            f"the origin {origin!r} and destination {destination!r}. "
+            'Use this schema: {"origin": "SFO", "destination": "TYO"}'
+        ),
+    )
+    result = json.loads(getattr(response, "text", ""))
+    origin_code = str(result["origin"]).strip().upper()
+    destination_code = str(result["destination"]).strip().upper()
+    if not all(len(code) == 3 and code.isalpha() for code in (origin_code, destination_code)):
+        raise ValueError("Gemini returned invalid IATA airport codes")
+    return origin_code, destination_code
+
+
+def resolve_iata_codes(origin: str, destination: str) -> tuple[str, str]:
+    """Resolve both route endpoints with Gemini, using local mappings as fallback."""
+    try:
+        return _resolve_iata_codes_with_gemini(origin, destination)
+    except Exception:
+        origin_code = origin.strip().upper()[:3]
+        destination_code = DESTINATION_IATA_CODES.get(
+            destination.upper().strip(),
+            destination.strip().upper()[:3],
+        )
+        if len(origin_code) != 3 or len(destination_code) != 3:
+            raise RuntimeError("Unable to resolve valid IATA codes for the requested route")
+        return origin_code, destination_code
+
 @track_latency("aviationstack_fetch_flights")
-def fetch_flights_from_api(origin: str, destination: str) -> List[Dict[str, Any]]:
+def fetch_flights_from_api(origin: str, destination: str, date: str) -> List[Dict[str, Any]]:
     """Calls external flight status API (AviationStack) to fetch schedules."""
-    api_key = get_secret("flight-api-key")
+    api_key = get_secret("FLIGHT_API_KEY")
     if not api_key:
         raise RuntimeError("Flight API key is not configured")
 
@@ -87,14 +127,24 @@ def fetch_flights_from_api(origin: str, destination: str) -> List[Dict[str, Any]
         "access_key": api_key,
         "dep_iata": origin,
         "arr_iata": destination,
+        "flight_date": date,
         "limit": 5
     }
     
     try:
         resp = requests.get(url, params=params, timeout=5)
         resp.raise_for_status()
-        
-        results = resp.json().get("data", [])
+        payload = resp.json()
+        if payload.get("error"):
+            error = payload["error"]
+            message = error.get("message", "Unknown AviationStack error")
+            code = error.get("code", "unknown_error")
+            raise RuntimeError(f"AviationStack error ({code}): {message}")
+
+        results = payload.get("data", [])
+        if not results:
+            raise RuntimeError("AviationStack returned no flights for the requested route and date")
+
         candidates = []
         for r in results:
             flight = r.get("flight", {})
@@ -102,19 +152,14 @@ def fetch_flights_from_api(origin: str, destination: str) -> List[Dict[str, Any]
             dep = r.get("departure", {})
             arr = r.get("arrival", {})
             
-            price = r.get("price")
-            if price is None:
-                raise RuntimeError("Flight API response did not include a price")
-            
             candidates.append({
                 "flight_no": f"{airline.get('iata', 'XX')} {flight.get('number', '000')}",
                 "carrier": airline.get('name', 'Independent Carrier'),
                 "departure": dep.get('scheduled', '12:00').split('T')[-1][:5],
                 "arrival": arr.get('scheduled', '15:00').split('T')[-1][:5],
-                "price": round(price, 2)
+                # AviationStack supplies schedules/status, not booking fares.
+                "price": float(r.get("price") or 0.0),
             })
-        if not candidates:
-            raise RuntimeError("Flight API returned no flight data")
         return candidates
     except requests.HTTPError as exc:
         detail = exc.response.text[:500] if exc.response is not None else str(exc)
@@ -124,11 +169,10 @@ def fetch_flights_from_api(origin: str, destination: str) -> List[Dict[str, Any]
 
 def search_flights(origin: str, destination: str, date: str, max_price: Optional[float] = None) -> List[FlightOption]:
     """Returns candidate flight options for origin -> destination."""
-    dest_code = DESTINATION_IATA_CODES.get(destination.upper().strip(), destination[:3].upper() if len(destination) >= 3 else "TYO")
-    orig_code = origin[:3].upper() if len(origin) >= 3 else "SFO"
+    orig_code, dest_code = resolve_iata_codes(origin, destination)
 
     try:
-        raw_candidates = fetch_flights_from_api(orig_code, dest_code)
+        raw_candidates = fetch_flights_from_api(orig_code, dest_code, date)
     except RuntimeError:
         raw_candidates = CITY_FLIGHT_CATALOG.get(dest_code, [])
 

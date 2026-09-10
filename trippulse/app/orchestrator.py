@@ -119,9 +119,16 @@ class TripPulseOrchestrator:
 
         if disruption_type == "flight_delay":
             log_agent_decision("Orchestrator", state.trip_id, "Processing flight delay", {"current_flight": state.selected_flight.flight_no if state.selected_flight else "None"})
-            # Pick alternative lower-risk flight if available
+            if state.selected_flight:
+                state.selected_flight.status = "Delayed"
+
+            # Pick an alternative lower-risk flight when available.
             if len(state.flight_options) > 1:
-                alt = sorted(state.flight_options, key=lambda f: f.risk_score)[0]
+                alternatives = [
+                    flight for flight in state.flight_options
+                    if not state.selected_flight or flight.flight_no != state.selected_flight.flight_no
+                ]
+                alt = sorted(alternatives or state.flight_options, key=lambda f: f.risk_score)[0]
                 state.selected_flight = alt
                 state.budget_ledger.flight_spent = alt.price
                 log_agent_decision("Orchestrator", state.trip_id, "Selected alternative flight", {"new_flight": alt.flight_no, "new_price": alt.price})
@@ -129,7 +136,7 @@ class TripPulseOrchestrator:
         elif disruption_type == "weather_rain":
             log_agent_decision("Orchestrator", state.trip_id, "Processing weather disruption", {"agent": "WeatherAgent"})
             # Trigger weather agent re-check
-            state = await asyncio.to_thread(self.weather_agent.process, state)
+            state = await asyncio.to_thread(self.weather_agent.process, state, True)
             log_agent_decision("Orchestrator", state.trip_id, "Weather agent re-processed", {"new_weather_risk": state.weather_forecast[0].risk_level if state.weather_forecast else "N/A"})
 
         # Re-run budget audit
